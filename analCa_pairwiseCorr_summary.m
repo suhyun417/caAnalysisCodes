@@ -86,12 +86,71 @@ for iSubj = 1:length(setNameSubj)
     
 end
 
-    
-    
-    
+for iSession = 1:length(resultsCov)
+        resultsCorr = resultsCov(iSession).resultsCorr;
+        center = resultsCov(iSession).center;
 
-    
+        for iType = 1:3
+            clear B I
+            [B, I] = sort(resultsCov(iSession).resultsCorr(iType).matR{1}, 'descend');
+        
+            sortedMatD = []; sortedMatR = [];
+            for iCell = 1:size(B, 1)
+                clear center_pairs
+                curCell = ones(size(B, 1)-1, 1).*iCell;
+                %             center_cell1 = center(curCell, :);
+                %             center_cell2 = center(I(2:end, iCell), :);
+                center_pairs(:,:,1) = center(curCell,:);
+                center_pairs(:,:,2) = center(I(2:end, iCell), :);
+                d = sum(diff(center_pairs, 1, 3).^2, 2);
+                sortedMatD(:,iCell) = d;
+            end
+            sortedMatR = B(2:end, :);
+            
+            corrD(iSession, iType).sortedMatD = sortedMatD;
+            corrD(iSession, iType).sortedMatR = sortedMatR;
+        end
+end
 
+figure(fig_highCorrPairs);
+subplot(1, length(resultsCorr), iType); %
+imagesc(imgFOV); colormap(gray);
+hold on
+plot(center(:,2), center(:,1), 'w.'); hold on;
+% set(gca, 'YDir', 'reverse'); hold on;
+for iPair = 1:size(setPairHighR, 1)
+    plot(center(setPairHighR(iPair, :), 2), center(setPairHighR(iPair, :), 1), 'o-', ...
+        'Color', cMap_highR(iPair,:), 'MarkerFaceColor', cMap_highR(iPair,:), 'MarkerEdgeColor', 'none')
+    hold on;
+end
+xlabel(resultsCorr(iType).nameCond)
+    
+nc = 30;
+edges = -1:0.1:1;
+cMap = jet(length(edges)-1);
+figSingleCell = figure;
+for iCell = 1:size(resultsCov(iSession).resultsCorr(iType).matR{1}, 1)
+    figure(figSingleCell); clf;
+    for iType = 1:3
+        
+        [B, I] = sort(resultsCov(iSession).resultsCorr(iType).matR{1}, 'ascend');
+        indCorr = discretize(B(:,iCell), edges);
+        
+        subplot(1, 3, iType);        
+        set(gca, 'YDir', 'reverse'); hold on;
+        scatter(center(I(:, iCell), 2), center(I(:, iCell), 1), 30, cMap(indCorr, :), 'fill'); %jet(nc), 'fill');
+        text(center(iCell, 2)+1, center(iCell, 1), num2str(iCell), 'Color', 'k');
+        title(sprintf('%s Session %d/%d: Cell %d', nameSubj, iSession, length(resultsCov), iCell))
+        
+    end
+    
+    input('')
+end
+
+
+
+
+scatter(center(I(:, iCell), 2), center(I(:, iCell), 1), 30, cMap(indCorr, :), 'fill');
     
     
     
