@@ -103,27 +103,43 @@ for iSubj = 1 %:length(setNameSubj)
             for iCell = 1:size(matTS, 2)
                 for iTrial = 1:length(stimTiming_BPM(iRun).indValidTrial)
                     
-                    tS_trial(iCell, iTrial).matTS = matTS(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)-10:stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+35, iCell); %
-                    tS_trial(iCell, iTrial).matTS_norm = matTS_norm(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)-10:stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+35, iCell);
+                    locTS = stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)-10:stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+35;
                     
-                    win_ms = [500 1500]; % time window of amplitude calculation (in ms: zero is stim Onset)
+                    tS_trial(iCell, iTrial).matTS = matTS(locTS, iCell); %
+                    tS_trial(iCell, iTrial).matTS_norm = matTS_norm(locTS, iCell);
+                    
+                    amp_win_ms = [500 1500]; % time window of amplitude calculation (in ms: zero is stim Onset)
                     fs = 10;
-                    win_frame = win_ms./(1000/fs);
+                    amp_win_frame = amp_win_ms./(1000/fs);
                     
                     tS_trial(iCell, iTrial).idStim = stimTiming_BPM(iRun).idStim(iTrial);
-                    tS_trial(iCell, iTrial).amp_win_ms = win_ms;
-                    tS_trial(iCell, iTrial).amp_win_frame = win_frame;
                     
-                    tS_trial(iCell, iTrial).matAmp = matTS(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+win_frame(1): stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+win_frame(2), iCell);
+                    tS_trial(iCell, iTrial).locTS = locTS;
+                    
+                    tS_trial(iCell, iTrial).locStimOnset = find(locTS==stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial));
+                    tS_trial(iCell, iTrial).locBlankOnset = find(locTS==stimTiming_BPM(iRun).locCaFrame.blankOn_afterStim(iTrial));
+                    tS_trial(iCell, iTrial).locBeforeStim = 1:tS_trial(iCell, iTrial).locStimOnset-1;
+                    
+                    tS_trial(iCell, iTrial).amp_win_ms = amp_win_ms;
+                    tS_trial(iCell, iTrial).amp_win_frame = amp_win_frame;
+                    
+                    tS_trial(iCell, iTrial).matAmp = matTS(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(1): stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(2), iCell);
                     tS_trial(iCell, iTrial).avgAmp = median(tS_trial(iCell, iTrial).matAmp);
-                    tS_trial(iCell, iTrial).matAmp_norm = matTS_norm(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+win_frame(1): stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+win_frame(2), iCell);
+                    tS_trial(iCell, iTrial).matAmp_norm = matTS_norm(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(1): stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(2), iCell);
                     tS_trial(iCell, iTrial).avgAmp_norm = median(tS_trial(iCell, iTrial).matAmp_norm);
+                    
+                    % baseline
+                    tS_trial(iCell, iTrial).matAmp_b = tS_trial(iCell, iTrial).matTS(tS_trial(iCell, iTrial).locBeforeStim);
+                    tS_trial(iCell, iTrial).avgAmp_b = median(tS_trial(iCell, iTrial).matAmp_b);
+                    tS_trial(iCell, iTrial).matAmp_b_norm = tS_trial(iCell, iTrial).matTS_norm(tS_trial(iCell, iTrial).locBeforeStim);
+                    tS_trial(iCell, iTrial).avgAmp_b_norm = median(tS_trial(iCell, iTrial).matAmp_b_norm);
                     
                 end
             end
             
             tS_run(iRun).tS_trial = tS_trial;
         end
+        clear tS_trial
         
         % merge across runs
         % merge info for session
@@ -153,12 +169,21 @@ for iSubj = 1 %:length(setNameSubj)
                 tS_session_stim(iCell, iStim).indTrial_org = tS_session.idRunTrial(curIndTrial, :);
                 tS_session_stim(iCell, iStim).matTS = cat(2, tS_session.tS_trial(iCell, curIndTrial).matTS);
                 tS_session_stim(iCell, iStim).matTS_norm = cat(2, tS_session.tS_trial(iCell, curIndTrial).matTS_norm);
+                % amplitude
                 tS_session_stim(iCell, iStim).matAmp = cat(2, tS_session.tS_trial(iCell, curIndTrial).matAmp);
                 tS_session_stim(iCell, iStim).matAmp_norm = cat(2, tS_session.tS_trial(iCell, curIndTrial).matAmp_norm);
                 tS_session_stim(iCell, iStim).matAvgAmp = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
                 tS_session_stim(iCell, iStim).matAvgAmp_norm = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
                 tS_session_stim(iCell, iStim).avgAmp = median(tS_session_stim(iCell, iStim).matAvgAmp); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
                 tS_session_stim(iCell, iStim).avgAmp_norm = median(tS_session_stim(iCell, iStim).matAvgAmp_norm); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
+                % baseline
+                tS_session_stim(iCell, iStim).matAmp_b = cat(2, tS_session.tS_trial(iCell, curIndTrial).matAmp_b);
+                tS_session_stim(iCell, iStim).matAmp_b_norm = cat(2, tS_session.tS_trial(iCell, curIndTrial).matAmp_b_norm);
+                tS_session_stim(iCell, iStim).matAvgAmp_b = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_b);
+                tS_session_stim(iCell, iStim).matAvgAmp_b_norm = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_b_norm);
+                tS_session_stim(iCell, iStim).avgAmp_b = median(tS_session_stim(iCell, iStim).matAvgAmp_b); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
+                tS_session_stim(iCell, iStim).avgAmp_b_norm = median(tS_session_stim(iCell, iStim).matAvgAmp_b_norm); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
+
                 
                 clear curStim curIndTrial
             end

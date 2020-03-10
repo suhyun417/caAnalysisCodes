@@ -147,8 +147,22 @@ for iCell = 1:size(resultsCov(iSession).resultsCorr(iType).matR{1}, 1)
     input('')
 end
 
+iSession = 1;
+resultsCorr = resultsCov(iSession).resultsCorr;
 
-
+iType = 2;
+iRun = 1; % look at 1st run here
+locHighR = find(resultsCorr(iType).vectR{iRun} > resultsCorr(iType).critHighR{iRun});
+[rr, cc, vectR] = find(triu(resultsCorr(iType).matR{iRun}, 1));
+setPairHighR = cat(2, rr(locHighR), cc(locHighR));
+fig_corrTS = figure;
+for iPair = 1:size(setPairHighR,1)
+figure(fig_corrTS); clf;
+plot(resultsCov(iSession).matTS_sm(iType).ts{iRun}(setPairHighR(iPair,:), :)');
+axis tight
+title(sprintf('%s Session %d/: %s: Pair #%d [Cell %d %d]: r = %2.2f', nameSubj, iSession, resultsCorr(iType).nameCond, iPair, setPairHighR(iPair,1), setPairHighR(iPair,2), resultsCorr(iType).vectR{iRun}(locHighR(iPair))))
+input('')
+end
 
 scatter(center(I(:, iCell), 2), center(I(:, iCell), 1), 30, cMap(indCorr, :), 'fill');
     
