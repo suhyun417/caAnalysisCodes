@@ -147,10 +147,10 @@ for iCell = 1:size(resultsCov(iSession).resultsCorr(iType).matR{1}, 1)
     input('')
 end
 
-iSession = 1;
+iSession = 2;
 resultsCorr = resultsCov(iSession).resultsCorr;
 
-iType = 2;
+iType = 3;
 iRun = 1; % look at 1st run here
 locHighR = find(resultsCorr(iType).vectR{iRun} > resultsCorr(iType).critHighR{iRun});
 [rr, cc, vectR] = find(triu(resultsCorr(iType).matR{iRun}, 1));

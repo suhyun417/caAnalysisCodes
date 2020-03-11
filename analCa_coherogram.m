@@ -62,6 +62,12 @@ params.Fs = 10;
 params.trialave = 1;
 % params.err      = [0 0.05];
 
+nTrial = [];
+for iRun = 1:length(tS_run)
+    nTrial(iRun,1) = size(tS_run(iRun).tS_trial, 2);
+end
+minNumTrial = min(nTrial);
+
 idCell1 = 105;
 idCell2 = 108;
 data1 = []; data2=[];
@@ -74,7 +80,7 @@ data2(:, iRun) = curTS2;
 end
 
 movingwin = [10 0.5];
-params.taper = [10*6 119];
+params.tapers = [10*2 39];
 [C,phi,S12,S1,S2,t,f]=cohgramc(data1,data2,movingwin,params);
 data2_s = data2(:, [2:end, 1]);
 [sC,phi,S12,S1,S2,t,f]=cohgramc(data1,data2_s,movingwin,params);
