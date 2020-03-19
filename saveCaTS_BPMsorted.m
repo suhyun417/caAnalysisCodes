@@ -176,7 +176,7 @@ for iSubj = 1:length(setNameSubj)
                 tS_session_stim(iCell, iStim).matAvgAmp = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
                 tS_session_stim(iCell, iStim).matAvgAmp_norm = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
                 tS_session_stim(iCell, iStim).avgAmp = mean(tS_session_stim(iCell, iStim).matAvgAmp); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
-                tS_session_stim(iCell, iStim).avgAmp_norm = median(tS_session_stim(iCell, iStim).matAvgAmp_norm); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
+                tS_session_stim(iCell, iStim).avgAmp_norm = mean(tS_session_stim(iCell, iStim).matAvgAmp_norm); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
                 % baseline
                 tS_session_stim(iCell, iStim).matAmp_b = cat(2, tS_session.tS_trial(iCell, curIndTrial).matAmp_b);
                 tS_session_stim(iCell, iStim).matAmp_b_norm = cat(2, tS_session.tS_trial(iCell, curIndTrial).matAmp_b_norm);
