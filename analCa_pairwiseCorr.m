@@ -1,4 +1,4 @@
-% analCa_covariation.m
+% analCa_pairwiseCorr.m
 
 clear all;
 
