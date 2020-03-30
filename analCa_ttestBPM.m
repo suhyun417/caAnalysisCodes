@@ -29,7 +29,7 @@ nSession = length(setDateSession);
 
 close all;
 
-iSession = 2; %1;
+iSession = 1; %12; %1;
 dateSession = setDateSession{iSession};
 % dateSession = '20191113'; %setDateSession{iSession};
 
@@ -37,9 +37,6 @@ dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', 
 dirPreproc = fullfile(dirProcdata_session, '_preproc');
 
 dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
-
-% load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', nameSubj, dateSession))
-% load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
 
 % %% Read source data and compute center coordinates of cells
 % addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
@@ -59,7 +56,7 @@ dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
 % center = center(validIndCell, :);
 
 %% t-test to compare visual responses and baseline
-load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession), 'tS_session_stim')
+load(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession)), 'tS_session_stim')
 
 a = 0.05;
 for iCell = 1:size(tS_session_stim, 1)

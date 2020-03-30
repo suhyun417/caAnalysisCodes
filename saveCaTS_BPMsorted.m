@@ -49,7 +49,7 @@ for iSubj = 1:length(setNameSubj)
         
         dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
         
-        
+        fprintf(1, ':: SaveCaTS_BPMsorted.m :: processing %s_%s session (#%d/%d) ...\n', nameSubj, dateSession, iSession, length(setDateSession));
         
         %% Read source data
         addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
@@ -125,15 +125,15 @@ for iSubj = 1:length(setNameSubj)
                     tS_trial(iCell, iTrial).locRespAmp = tS_trial(iCell, iTrial).locStimOnset+amp_win_frame(1):tS_trial(iCell, iTrial).locStimOnset+amp_win_frame(2);
                     
                     tS_trial(iCell, iTrial).matAmp = matTS(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(1): stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(2), iCell);
-                    tS_trial(iCell, iTrial).avgAmp = mean(tS_trial(iCell, iTrial).matAmp);
+                    tS_trial(iCell, iTrial).avgAmp = median(tS_trial(iCell, iTrial).matAmp);
                     tS_trial(iCell, iTrial).matAmp_norm = matTS_norm(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(1): stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(2), iCell);
-                    tS_trial(iCell, iTrial).avgAmp_norm = mean(tS_trial(iCell, iTrial).matAmp_norm);
+                    tS_trial(iCell, iTrial).avgAmp_norm = median(tS_trial(iCell, iTrial).matAmp_norm);
                     
                     % baseline
                     tS_trial(iCell, iTrial).matAmp_b = tS_trial(iCell, iTrial).matTS(tS_trial(iCell, iTrial).locBeforeStim);
-                    tS_trial(iCell, iTrial).avgAmp_b = mean(tS_trial(iCell, iTrial).matAmp_b);
+                    tS_trial(iCell, iTrial).avgAmp_b = median(tS_trial(iCell, iTrial).matAmp_b);
                     tS_trial(iCell, iTrial).matAmp_b_norm = tS_trial(iCell, iTrial).matTS_norm(tS_trial(iCell, iTrial).locBeforeStim);
-                    tS_trial(iCell, iTrial).avgAmp_b_norm = mean(tS_trial(iCell, iTrial).matAmp_b_norm);
+                    tS_trial(iCell, iTrial).avgAmp_b_norm = median(tS_trial(iCell, iTrial).matAmp_b_norm);
                     
                 end
             end
@@ -175,15 +175,15 @@ for iSubj = 1:length(setNameSubj)
                 tS_session_stim(iCell, iStim).matAmp_norm = cat(2, tS_session.tS_trial(iCell, curIndTrial).matAmp_norm);
                 tS_session_stim(iCell, iStim).matAvgAmp = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
                 tS_session_stim(iCell, iStim).matAvgAmp_norm = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
-                tS_session_stim(iCell, iStim).avgAmp = mean(tS_session_stim(iCell, iStim).matAvgAmp); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
-                tS_session_stim(iCell, iStim).avgAmp_norm = mean(tS_session_stim(iCell, iStim).matAvgAmp_norm); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
+                tS_session_stim(iCell, iStim).avgAmp = median(tS_session_stim(iCell, iStim).matAvgAmp); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
+                tS_session_stim(iCell, iStim).avgAmp_norm = median(tS_session_stim(iCell, iStim).matAvgAmp_norm); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
                 % baseline
                 tS_session_stim(iCell, iStim).matAmp_b = cat(2, tS_session.tS_trial(iCell, curIndTrial).matAmp_b);
                 tS_session_stim(iCell, iStim).matAmp_b_norm = cat(2, tS_session.tS_trial(iCell, curIndTrial).matAmp_b_norm);
                 tS_session_stim(iCell, iStim).matAvgAmp_b = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_b);
                 tS_session_stim(iCell, iStim).matAvgAmp_b_norm = cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_b_norm);
-                tS_session_stim(iCell, iStim).avgAmp_b = mean(tS_session_stim(iCell, iStim).matAvgAmp_b); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
-                tS_session_stim(iCell, iStim).avgAmp_b_norm = mean(tS_session_stim(iCell, iStim).matAvgAmp_b_norm); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
+                tS_session_stim(iCell, iStim).avgAmp_b = median(tS_session_stim(iCell, iStim).matAvgAmp_b); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp);
+                tS_session_stim(iCell, iStim).avgAmp_b_norm = median(tS_session_stim(iCell, iStim).matAvgAmp_b_norm); %cat(1, tS_session.tS_trial(iCell, curIndTrial).avgAmp_norm);
 
                 
                 clear curStim curIndTrial
@@ -256,7 +256,7 @@ for iSubj = 1:length(setNameSubj)
                         plot([-1:0.1:3.5], tS_session_stim(iCell, indStim).matTS_norm, 'LineWidth', 1);
                         set(gca, 'XLim', [-1 3.5], 'XTick', -1:1:3)
                         
-                        avgTS(:,iM) = mean(tS_session_stim(iCell, indStim).matTS_norm, 2);
+                        avgTS(:,iM) = median(tS_session_stim(iCell, indStim).matTS_norm, 2);
                         
                         if iM==1
                             ylabel(sp_stim(iCond, iM), setCondName{iCond}, 'Color', cMap_cond(iCond, :));
@@ -271,7 +271,7 @@ for iSubj = 1:length(setNameSubj)
                     plot([-1:0.1:3.5], avgTS)
                     set(gca, 'XLim', [-1 3.5], 'XTick', -1:1:3)
                     
-                    avgTS_cond(:, iCond) = mean(avgTS, 2);
+                    avgTS_cond(:, iCond) = median(avgTS, 2);
                 end
                 
                 sp_stim(length(setCond)+1, 1) = subplot(length(setCond)+1, nImage+1, length(setCond)*(nImage+1)+1);

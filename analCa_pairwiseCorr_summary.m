@@ -147,6 +147,36 @@ for iCell = 1:size(resultsCov(iSession).resultsCorr(iType).matR{1}, 1)
     input('')
 end
 
+
+nameSubj = 'Max'; %'Tabla';
+
+switch lower(nameSubj)
+    case 'tabla'
+        dirSave = '/procdata/parksh/_marmoset/invivoCalciumImaging/Tabla/FOV1';
+    case 'max'
+        dirSave = '/procdata/parksh/_marmoset/invivoCalciumImaging/Max/FOV3';
+end
+
+%% Read source data and compute center coordinates of cells
+        addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
+        cnmfe_setup;
+        d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
+        
+        load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
+        
+        validIndCell = [];
+        validIndCell(:,1) = 1:length(neuron.ids);
+        if strcmpi(nameSubj, 'max')
+            load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
+            validIndCell = indCell.validCell;
+        end
+        
+        [center] = neuron.estCenter();
+        center = center(validIndCell, :);
+        
+%% Load covariation results
+load(fullfile(dirSave, 'pairwiseCorr.mat'), 'resultsCov');
+
 iSession = 2;
 resultsCorr = resultsCov(iSession).resultsCorr;
 

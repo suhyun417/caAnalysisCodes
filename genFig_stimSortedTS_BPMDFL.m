@@ -13,8 +13,10 @@ else % on virtual machine
     dirRawdata = '/rawdata/parksh';
 end
 
+setSubj = {'Tabla', 'Max'};
 
-nameSubj = 'Tabla'; % 'Max'; %'Tabla';
+for iSubj = 1:length(setSubj)
+nameSubj = setSubj{iSubj}; %'Tabla'; % 'Max'; %'Tabla';
 % setDateSession = {'20191209'};
 
 % get session info
@@ -29,7 +31,7 @@ clear infoSession
 
 flagSavePPTX = 1; % 1 if you want to save figures to PPTX
 
-for iSession = 2 %1:length(setDateSession)
+for iSession = 1:length(setDateSession)
     
     close all;
     
@@ -45,6 +47,8 @@ for iSession = 2 %1:length(setDateSession)
         case 'max'
             dest = '/procdata/parksh/_marmoset/invivoCalciumImaging/Max/FOV3';
     end
+    
+    fprintf(1, ':: genFig_stimSortedTS_BPMDFL.m :: plotting %s_%s session (#%d/%d) ...\n', nameSubj, dateSession, iSession, length(setDateSession));
     
     % load the time series
     load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession), 'tS_session_stim', 'stimTiming_BPM')
@@ -141,7 +145,7 @@ for iSession = 2 %1:length(setDateSession)
                 plot([-1:0.1:3.5], tS_session_stim(iCell, indStim).matTS_norm, 'LineWidth', 1);
                 set(gca, 'XLim', [-1 3.5], 'XTick', -1:1:3)
                 
-                avgTS(:,iM) = mean(tS_session_stim(iCell, indStim).matTS_norm, 2);
+                avgTS(:,iM) = median(tS_session_stim(iCell, indStim).matTS_norm, 2);
                 
                 if iM==1
                     ylabel(sp_stim(iCond, iM), setCondName{iCond}, 'Color', cMap_cond(iCond, :));
@@ -156,7 +160,7 @@ for iSession = 2 %1:length(setDateSession)
             plot([-1:0.1:3.5], avgTS)
             set(gca, 'XLim', [-1 3.5], 'XTick', -1:1:3)
             
-            avgTS_cond(:, iCond) = mean(avgTS, 2);
+            avgTS_cond(:, iCond) = median(avgTS, 2);
         end
         
         sp_stim(length(setCond)+1, 1) = subplot(length(setCond)+1, nImage+1, length(setCond)*(nImage+1)+1);
@@ -251,4 +255,5 @@ for iSession = 2 %1:length(setDateSession)
 %         movefile(sprintf('./%s_%s*.pptx', nameSubj, dateSession), dest);
 %     end
     
+end
 end

@@ -141,6 +141,7 @@ for iSubj = 1:length(setNameSubj)
         resultsCov(iSession).dateSession = dateSession;
         resultsCov(iSession).win_sm = win_sm;
         resultsCov(iSession).matTS_sm = matTS_sm;
+        resultsCov(iSession).center = center;
         resultsCov(iSession).resultsCorr = resultsCorr;
         
         % save the data
