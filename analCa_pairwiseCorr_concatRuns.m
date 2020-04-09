@@ -148,6 +148,7 @@ for iSubj = 1:length(setNameSubj)
         
         resultsCov(iSession).nameSubj = nameSubj;
         resultsCov(iSession).dateSession = dateSession;
+        resultsCov(iSession).validIndCell_org = validIndCell;
         resultsCov(iSession).win_sm = win_sm;
         resultsCov(iSession).matTS_sm = matTS_sm;
         resultsCov(iSession).center = center;

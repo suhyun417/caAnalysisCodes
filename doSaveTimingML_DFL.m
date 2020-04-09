@@ -1,4 +1,4 @@
-function [] = saveTimingML_DFL(fname_bhv, fname_out_mat)
+function [] = doSaveTimingML_DFL(fname_bhv, fname_out_mat)
 % get behavioral data and timing info from ML
 
 [data, MLConfig, TrialRecord] = mlread(fname_bhv);

@@ -1,4 +1,4 @@
-function [] = saveTimingML_BPM(fname_bhv, fname_out_mat)
+function [] = doSaveTimingML_BPM(fname_bhv, fname_out_mat)
 % get behavioral data and timing info from ML 
 
 %     saveFileName = fullfile(dirProcdata_session, sprintf('BPM_%d_tML.mat', iRun));

@@ -1,8 +1,16 @@
-% doInitPreproc_CNMFe_RS.m
+% runInitPreproc_CNMFE.m
 %
-% For resting state sessions, do initial preprocessing (spatial downsampling and motion correction) before cell segmentation using CNMFe
-% modified from doInitPreproc_CNMFe.m
-% 2020/02/03 SHP
+% Script;
+% Initial preprocessing (spatial downsampling and motion correction) before cell segmentation using CNMFe
+% 2019/11/20 SHP
+% 2019/12/27 SHP
+%           : change downsampling methods (using imresize) to "box"
+%            from "nearest"
+% 2020/1/1 SHP
+%             : apply motion correction to a concatenated file of entire set of runs in a given session using NoRMCorre (esp. demo_1p_low_RAM.m)
+% 2020/04/09 SHP
+%           : changed the name of the code from "doInitPreproc_CNMFe.m" to
+%           "runInitPreproc_CNMFE.m"
 
 clear all;
 % gcp; % for parallel processingls
@@ -26,7 +34,7 @@ flagSaveFigure = 1;
 dirFig = '/projects/parksh/0Marmoset/Ca/_labNote/_figs/';
 
 % dateSession = '20191113'; % '20191223'; %'20191219'; %'20191125'; %'20191126'; %'20191114'; %'20191112';
-for iSubj = 1:length(setSubj)
+for iSubj = 2 %1:length(setSubj)
     nameSubj = setSubj{iSubj};
     
     % get session info
@@ -41,7 +49,7 @@ for iSubj = 1:length(setSubj)
 %         startSession = 2;
 %     end
     
-    for iSession = 3:nSession
+    for iSession = startSession:nSession
         dateSession = setDateSession{iSession};
         
         if str2num(dateSession) < 20191121
@@ -55,7 +63,7 @@ for iSubj = 1:length(setSubj)
         mkdir(dirProcData_session_preproc);
         
         % List of runs to process: get the info from the xls file
-        locRun = find((contains(infoSession.(1), dateSession).*(infoSession.(6)>0).*(contains(infoSession.(3), {'RS'})))>0); %find(((indRun==iSession+1).*(infoSession.(6)>0))>0);
+        locRun = find(((indRun==iSession+1).*(infoSession.(6)>0))>0);
         listRun = infoSession.(2)(locRun);
         
         %     d_raw = dir(fullfile(dirRawData_session, 'recording_*.raw'));
@@ -66,70 +74,61 @@ for iSubj = 1:length(setSubj)
             
             nameRun = listRun{iRun}; %char(regexp(listRun{iRun}, '\d{6}(?=.raw)', 'match'));
             
-            %% Spatial downsampling & cut out 2-min
+            %% Concatenate separated .tif files from the same recording and perform Spatial downsampling
             name_spatialDS = [nameRun, '_sDS_cat'];
             
-%             if ~exist(fullfile(dirProcData_session_preproc, [name_spatialDS, '.tif']), 'file')
+            if ~exist(fullfile(dirProcData_session_preproc, [name_spatialDS, '.tif']), 'file')
                 
                 % get the name(s) of .tif files for this run to concatenate
-                if strcmp(dateSession, '20191113')
-                    d_tif = dir(fullfile(dirRawData_session, ['recording_', dateSession, '_', nameRun, '*.tif']));
-%                     [~, ind] = sortrows({d_tif.name}', 'descend'); % to lineup the files in a right order for concatenation
-                    d_tif = d_tif([5 1 2 3 4]); %d_tif(ind);
-                    listFiles = {d_tif.name}';
+                d_tif = dir(fullfile(dirRawData_session, ['recording_', dateSession, '_', nameRun, '*.tif']));
+                [~, ind] = sortrows({d_tif.name}', 'descend'); % to lineup the files in a right order for concatenation
+                d_tif = d_tif(ind);
+                listFiles = {d_tif.name}';
+                
+                % load each tif file and perform preprocessing
+                nFile = length(listFiles);
+                Yf_cat = [];
+                for iFile = 1:nFile
                     
-                    % load each tif file and perform preprocessing
-                    nFile = length(listFiles);
-                    Yf_cat = [];
-                    for iFile = 1:nFile
-                        
-                        fprintf(1, ':: Run #%d/%d (%s): File #%d/%d: Loading %s from /rawdata to preprocess...\n', iRun, nRun, nameRun, iFile, nFile, listFiles{iFile});
-                        
-                        spatialFactor = 4;
-                        method_DS = 'box';
-                        [Yf_resize, tempParam] = doSpatialDS(nameSubj, dateSession, listFiles{iFile}, spatialFactor, method_DS);
-                        
-                        Yf_cat = cat(3, Yf_cat, Yf_resize);
-                        Yf_cat = single(Yf_cat); % downsampling changes it to double, so make single again
-                        
-                        paramSpatialDS(iFile) = tempParam;
-                    end
-                    
-                    excludeFrame = 10;
-                    nFrame = 1200;
-                    
-                    Yf_cat = Yf_cat(:, :, excludeFrame+1:excludeFrame+nFrame*5);
-                    
-                    paramPreproc.excludeFrame = excludeFrame;
-                    paramPreproc.nFrame = nFrame;
-                    
-                    clear Yf Yf_resize
-                    
-                else
-                    d_tif = dir(fullfile(dirRawData_session, ['recording_', dateSession, '_', nameRun, '.tif']));
-                    fprintf(1, ':: Run #%d/%d (%s):  Loading %s from /rawdata to preprocess...\n', iRun, nRun, nameRun, d_tif.name);
+                    fprintf(1, ':: Run #%d/%d (%s): File #%d/%d: Loading %s from /rawdata to preprocess...\n', iRun, nRun, nameRun, iFile, nFile, listFiles{iFile});
                     
                     spatialFactor = 4;
                     method_DS = 'box';
-                    [Yf_resize, paramSpatialDS] = doSpatialDS(nameSubj, dateSession, d_tif.name, spatialFactor, method_DS);
+                    [Yf_resize, paramSpatialDS] = doSpatialDS(nameSubj, dateSession, listFiles{iFile}, spatialFactor, method_DS);
                     
-                    excludeFrame = 10;
-                    nFrame = 1200;
-                    Yf_cat = Yf_resize(:, :, excludeFrame+1:excludeFrame+nFrame); % take only 1200 frames, cutting out first 10 frames
+                    %             Yf = loadtiff(fullfile(dirRawData_session, listFiles{iFile}));
+                    %             Yf = single(Yf);
+                    %             [d1,d2,T] = size(Yf);
+                    %
+                    %             % Spatial downsampling using imresize
+                    %             spatialFactor = 4;
+                    %             method_DS = 'box'; %'bilinear'; %'box'; %'bicubic'; %'nearest'; % 'bicubic';
+                    %             Yf_resize = NaN(d1/spatialFactor, d2/spatialFactor, T);
+                    % %             fprintf(1, ':: Run #%d/%d (%s): File #%d/%d: Spatial downsampling with spatial factor %2.2f, method %s ...',...
+                    % %                 iRun, nRun, nameRun, iFile, nFile, 1/spatialFactor, method_DS);
+                    %             for iFrame = 1:T
+                    %                 Yf_resize(:,:,iFrame) = imresize(Yf(:,:,iFrame), 1/spatialFactor, method_DS);
+                    %             end
+                    %             fprintf(1, '...DONE! \n');
+                    %
+                    %             paramPreproc.filename = listFiles;
+                    %             paramPreproc.spatialDownsampling.spatialFactor = spatialFactor;
+                    %             paramPreproc.spatialDownsampling.imresize_method = method_DS;
+                    %             paramPreproc.spatialDownsampling.dim_DS = size(Yf_resize);
+                    %             paramPreproc.spatialDownsampling.dim_org = [d1, d2, T];
+                    %             paramPreproc.spatialDownsampling.dim_DS = size(Yf_resize);
+                    
+                    Yf_cat = cat(3, Yf_cat, Yf_resize);
                     Yf_cat = single(Yf_cat); % downsampling changes it to double, so make single again
-                    
-                    paramSpatialDS.excludeFrame = excludeFrame;
-                    paramSpatialDS.nFrame = nFrame;
-                    
-                    clear Yf_resize
-                    
                 end
+                
+                clear Yf Yf_resize
                 
                 paramPreproc.filename = listFiles;
                 paramPreproc.paramSpatialDS = paramSpatialDS;
                 
                 %             name_spatialDS = [nameRun, '_sDS_cat']; %[nameSubj, '_', nameRun, '_RigidMotCorr']; %'20180521_Hoppy_10x_100msec_5p_2_RigidMotCorr.tif';
-                save(fullfile(dirProcData_session_preproc, name_spatialDS), 'Yf_cat', 'paramPreproc', '-v7.3');
+                save(fullfile(dirProcData_session_preproc, name_spatialDS), 'Yf_cat', 'paramPreproc');
                 fprintf(1, ':: Run #%d/%d (%s): Spatially downsampled and concatenated image was saved as .mat\n', iRun, nRun, nameRun);
                 fastTiffStackWrite(fullfile(dirProcData_session_preproc, [name_spatialDS, '.tif']), Yf_cat);
                 %         saveastiff(Yf_cat, fullfile(dirPreProcData_session, [name_spatialDS, '.tif']))
@@ -138,22 +137,22 @@ for iSubj = 1:length(setSubj)
                 clear Y*
                 
                 save(fullfile(dirProcData_session_preproc, 'paramPreproc.mat'), 'param*')
-%             else
-%                 fprintf(1, ':: Run #%d/%d (%s): Spatially downsampled file exists as %s\n',iRun, nRun, nameRun, [name_spatialDS, '.tif'])
-%                 clear Y*
-%             end
+            else
+                fprintf(1, ':: Run #%d/%d (%s): Spatially downsampled file exists as %s\n',iRun, nRun, nameRun, [name_spatialDS, '.tif'])
+                clear Y*
+            end
             
             %% Crop the image
             name_spatialDS_crop = [nameRun, '_sDS_cat_c'];
             
-            if paramCrop(iSubj).flagCrop % && ~exist(fullfile(dirProcData_session_preproc, [name_spatialDS_crop, '.tif']), 'file')
+            if paramCrop(iSubj).flagCrop && ~exist(fullfile(dirProcData_session_preproc, [name_spatialDS_crop, '.tif']), 'file')
                 coordsCrop = paramCrop(iSubj).coordsCrop;
                 
                 Y = loadtiff(fullfile(dirProcData_session_preproc, [name_spatialDS, '.tif']));
                 Y_c = Y(coordsCrop(3):coordsCrop(4), coordsCrop(1):coordsCrop(2), :);
                 fastTiffStackWrite(fullfile(dirProcData_session_preproc, [name_spatialDS_crop, '.tif']), Y_c);
                 fprintf(1, ':: Run #%d/%d (%s): Images are cropped and saved as .tif\n', iRun, nRun, nameRun);
-                clear Y*
+                clear Y Y_c
                 
                 save(fullfile(dirProcData_session_preproc, 'paramPreproc.mat'), 'param*')
             else
@@ -165,7 +164,7 @@ for iSubj = 1:length(setSubj)
             %% Gaussian bandpass filtering
             %             name_spatialDS_crop_bpf = [nameRun, '*_bpf'];
             
-            if flagBPF %&& isempty(dir(fullfile(dirProcData_session_preproc, [nameRun, '*_bpf.tif']))) % regardless of cropping
+            if flagBPF && isempty(dir(fullfile(dirProcData_session_preproc, [nameRun, '*_bpf.tif']))) % regardless of cropping
                 
                 if paramCrop(iSubj).flagCrop
                     if exist(fullfile(dirProcData_session_preproc, [nameRun, '_sDS_cat_c.tif']), 'file')
@@ -205,9 +204,7 @@ for iSubj = 1:length(setSubj)
             if ~exist(fullfile(dirProcData_session_preproc, 'mc_template.tif'), 'file') 
                 fprintf(1, '     :: Motion Correction: template file doesn''t exist: creating one now...\n')
                 
-                nameRun_template = infoSession.(2)(find(((indRun==iSession+1).*(infoSession.(6)>0))>0, 1));
-                
-                d = dir(fullfile(dirProcData_session_preproc, [nameRun_template{1}, '*_bpf.tif'])); % use bandpass filtered data
+                d = dir(fullfile(dirProcData_session_preproc, [listRun{1}, '*_bpf.tif'])); % use bandpass filtered data
                 fname = fullfile(dirProcData_session_preproc, d.name);
                 
                 paramHPF.gSig = 7;
@@ -277,10 +274,7 @@ for iSubj = 1:length(setSubj)
                 clear Y Yf YY Y_temp template
             end
             
-            if ~isempty(dir(fullfile(dirProcData_session_preproc, [nameRun, '*_mc.tif'])))
-                d_temp = dir(fullfile(dirProcData_session_preproc, [nameRun, '*_mc.tif']));
-                delete(fullfile(d_temp.folder, d_temp.name));
-            end
+            if isempty(dir(fullfile(dirProcData_session_preproc, [nameRun, '*_mc.tif'])))
                 
                 fprintf(1, '    :: Motion Correction: template file is being loaded from %s\n', fullfile(dirProcData_session_preproc, 'mc_template.tif'))
                 template_in = loadtiff(fullfile(dirProcData_session_preproc, 'mc_template.tif'));
@@ -346,38 +340,36 @@ for iSubj = 1:length(setSubj)
                 clear Y* M* 
                 save(fullfile(dirProcData_session_preproc, 'paramPreproc.mat'), 'param*')
                 
-%             else
-%                 fprintf(1, ':: Run #%d/%d (%s): Motion corrected file exists. \n',iRun, nRun, nameRun);
-%             end 
+            else
+                fprintf(1, ':: Run #%d/%d (%s): Motion corrected file exists. \n',iRun, nRun, nameRun);
+            end 
           
         end % run
         
-        %% concatenate runs        
-        fname_cat = fullfile(dirProcData_session_preproc, 'ConcatRuns_RS'); %fullfile(dirProcData_session_preproc, 'ConcatRuns_BPM_DFL');
-        
+%         %% concatenate runs        
+%         fname_cat = fullfile(dirProcData_session_preproc, 'ConcatRuns_RS'); %fullfile(dirProcData_session_preproc, 'ConcatRuns_BPM_DFL');
+%         
 %         if ~exist([fname_cat '.mat'], 'file')
-            % List of runs to process: get the info from the xls file
-%             locRun_session = find((contains(infoSession.(1), dateSession).*(infoSession.(6)>0).*(contains(infoSession.(3), {'BPM', 'DFL'})))>0);
-            locRun_session = find((contains(infoSession.(1), dateSession).*(infoSession.(6)>0).*(contains(infoSession.(3), {'RS'})))>0);            
-            listRun = infoSession.(2)(locRun_session);
-            if strcmp(dateSession, '20191113')
-                listRun = {'133912'};
-            end
-            listFileName = strcat(fullfile(dirProcData_session_preproc, listRun), '*_mc.tif');
-            % for iFile = 1:length(tempListFile)
-            %     d = dir(tempListFile{iFile});
-            %     listFileName{iFile, 1} = fullfile(;
-            % end
-            
-            fprintf(1, 'Session %d/%d: %s: Concatenating runs of BPM and DFL..\n', iSession, nSession, dateSession)
-            tic; doConcatRuns(listFileName, fname_cat); toc;
-            fprintf(1, 'Session %d/%d: %s: ............................Done!\n', iSession, nSession, dateSession)
-            
-            paramConcat.listRun = listRun;
-            paramConcat.listFileName = listFileName;
-            paramConcat.infoSession = table2struct(infoSession(locRun_session, :));
-            
-            save([fname_cat '.mat'], 'paramConcat', '-append')
+%             % List of runs to process: get the info from the xls file
+% %             locRun_session = find((contains(infoSession.(1), dateSession).*(infoSession.(6)>0).*(contains(infoSession.(3), {'BPM', 'DFL'})))>0);
+%             locRun_session = find((contains(infoSession.(1), dateSession).*(infoSession.(6)>0).*(contains(infoSession.(3), {'RS'})))>0);
+%             
+%             listRun = infoSession.(2)(locRun_session);
+%             listFileName = strcat(fullfile(dirProcData_session_preproc, listRun), '*_mc.tif');
+%             % for iFile = 1:length(tempListFile)
+%             %     d = dir(tempListFile{iFile});
+%             %     listFileName{iFile, 1} = fullfile(;
+%             % end
+%             
+%             fprintf(1, 'Session %d/%d: %s: Concatenating runs of BPM and DFL..\n', iSession, nSession, dateSession)
+%             tic; doConcatRuns(listFileName, fname_cat); toc;
+%             fprintf(1, 'Session %d/%d: %s: ............................Done!\n', iSession, nSession, dateSession)
+%             
+%             paramConcat.listRun = listRun;
+%             paramConcat.listFileName = listFileName;
+%             paramConcat.infoSession = table2struct(infoSession(locRun_session, :));
+%             
+%             save([fname_cat '.mat'], 'paramConcat', '-append')
 %         else
 %             fprintf(1, '::Session #%d/%d (%s): Concatenated file exists in %s\n',iSession, nSession, dateSession, [fname_cat '.mat']);
 %         end

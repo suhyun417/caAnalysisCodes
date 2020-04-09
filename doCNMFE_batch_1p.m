@@ -1,4 +1,4 @@
-function [neuron, flags] = runCNMFE_batch_1p(fname, paramCNMFE)
+function [neuron, flags] = doCNMFE_batch_1p(fname, paramCNMFE)
 
 
 %% clear the workspace and select data

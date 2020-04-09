@@ -41,7 +41,7 @@ for iSession = 1:nSession
             case 'BPM'
                 count_BPM = count_BPM+1;
                 fname_mat = fullfile(dirProcdata_session, sprintf('BPM_%d_tML.mat', count_BPM));
-                saveTimingML_BPM(fname_bhv, fname_mat);
+                doSaveTimingML_BPM(fname_bhv, fname_mat);
                 
                 % additionally save relevant info with regard to imaging file
                 infoImaging = infoSession(iRun);
@@ -49,7 +49,7 @@ for iSession = 1:nSession
             case 'DFL'
                 count_DFL = count_DFL+1;
                 fname_mat = fullfile(dirProcdata_session, sprintf('DFL_%d_tML.mat', count_DFL));
-                saveTimingML_DFL(fname_bhv, fname_mat);
+                doSaveTimingML_DFL(fname_bhv, fname_mat);
                 
                 % additionally save relevant info with regard to imaging file
                 infoImaging = infoSession(iRun);

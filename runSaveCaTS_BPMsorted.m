@@ -84,6 +84,7 @@ for iSubj = 1:length(setNameSubj)
             locFrameBlankOn_afterStim = floor(t_adj.blankOnset_afterStim(validT)./(1000/fs))+1;
             
             stimTiming_BPM(iRun).indValidTrial = validT;
+            stimTiming_BPM(iRun).indValidTrial_orgBhv = infoTrial.indValidTrial(validT);
             stimTiming_BPM(iRun).locCaFrame.trialStart = locFrameTrialStart;
             stimTiming_BPM(iRun).locCaFrame.stimOn = locFrameStimOn;
             stimTiming_BPM(iRun).locCaFrame.blankOn_afterStim = locFrameBlankOn_afterStim;
@@ -125,15 +126,15 @@ for iSubj = 1:length(setNameSubj)
                     tS_trial(iCell, iTrial).locRespAmp = tS_trial(iCell, iTrial).locStimOnset+amp_win_frame(1):tS_trial(iCell, iTrial).locStimOnset+amp_win_frame(2);
                     
                     tS_trial(iCell, iTrial).matAmp = matTS(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(1): stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(2), iCell);
-                    tS_trial(iCell, iTrial).avgAmp = median(tS_trial(iCell, iTrial).matAmp);
+                    tS_trial(iCell, iTrial).avgAmp = mean(tS_trial(iCell, iTrial).matAmp);
                     tS_trial(iCell, iTrial).matAmp_norm = matTS_norm(stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(1): stimTiming_BPM(iRun).locCaFrame.stimOn(iTrial)+amp_win_frame(2), iCell);
-                    tS_trial(iCell, iTrial).avgAmp_norm = median(tS_trial(iCell, iTrial).matAmp_norm);
+                    tS_trial(iCell, iTrial).avgAmp_norm = mean(tS_trial(iCell, iTrial).matAmp_norm);
                     
                     % baseline
                     tS_trial(iCell, iTrial).matAmp_b = tS_trial(iCell, iTrial).matTS(tS_trial(iCell, iTrial).locBeforeStim);
-                    tS_trial(iCell, iTrial).avgAmp_b = median(tS_trial(iCell, iTrial).matAmp_b);
+                    tS_trial(iCell, iTrial).avgAmp_b = mean(tS_trial(iCell, iTrial).matAmp_b);
                     tS_trial(iCell, iTrial).matAmp_b_norm = tS_trial(iCell, iTrial).matTS_norm(tS_trial(iCell, iTrial).locBeforeStim);
-                    tS_trial(iCell, iTrial).avgAmp_b_norm = median(tS_trial(iCell, iTrial).matAmp_b_norm);
+                    tS_trial(iCell, iTrial).avgAmp_b_norm = mean(tS_trial(iCell, iTrial).matAmp_b_norm);
                     
                 end
             end

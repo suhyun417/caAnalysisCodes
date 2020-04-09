@@ -1,6 +1,6 @@
-function [neuron, flags] = runCNMFE_1p(fname, paramCNMFE)
+function [neuron, flags] = doCNMFE_1p(fname, paramCNMFE)
 
-% run CNMF-E on 1p data (not temporal batch mode)
+% apply CNMF-E algorithm on 1p data (not temporal batch mode)
 % modified from demp_large_data_1p.m from CNMF-E package
 % 2020/02/14 SHP
 
