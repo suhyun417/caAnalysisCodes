@@ -22,7 +22,7 @@ setNameSubj = {'Tabla', 'Max'};
 dirSave{1} = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/Tabla/FOV1');
 dirSave{2} = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/Max/FOV3');
 
-nameSubj =  'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+nameSubj =  'Max'; %'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 % dateSession = '20191113'; %'20191125';  
     
 % get session info
@@ -33,7 +33,7 @@ setDateSession = c(2:end); % 1st one is always empty
 nSession = length(setDateSession);
 
 % for iSession = 1:nSession
-    iSession = 12;
+    iSession = 3;
     dateSession = setDateSession{iSession};
     
     dirProcdata_session = fullfile('/procdata/parksh/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
@@ -49,14 +49,21 @@ nSession = length(setDateSession);
     % load and plot the cell time series to check
     load(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession)), ...
         'tS_session_stim', 'stimTiming_BPM');
-    iCell = 82;
-    iStim = 23;
+    iCell = 21; %82;
+    iStim = 13; %23;
     
+    setMarkers = {'o', '^', 'sq', 'x', '+'};     
     cMap_trial = hsv(size(tS_session_stim(iCell, iStim).matTS_norm, 2));
     fig_ts = figure;
+%     set(groot, 'DefaultAxesColorOrder', hsv(4), 'DefaultAxesLineStyleOrder', '-|--|:');
     set(gca, 'ColorOrder', cMap_trial);
     hold on;
-    plot([-1:0.1:3.5], tS_session_stim(iCell, iStim).matTS_norm)
+    for iTrial = 1:size(tS_session_stim(iCell, iStim).matTS_norm, 2)
+        figure(fig_ts);
+        plot([-1:0.1:3.5], tS_session_stim(iCell, iStim).matTS_norm(:, iTrial), 'o-', 'Marker', setMarkers{mod(iTrial, 5)+1}, 'Color', cMap_trial(iTrial,:));
+        hold on
+    end
+%     plot([-1:0.1:3.5], tS_session_stim(iCell, iStim).matTS_norm)
     title(sprintf('%s %s: Cell ID #%d, Stimulus ID #%d', nameSubj, dateSession, iCell, iStim))
     
     
@@ -79,19 +86,42 @@ nSession = length(setDateSession);
         tempPupilSig{iT} = data(indTrial_bhv).AnalogData.General.Gen1; %data(tS_session_stim(iCell, iStim).indTrial_org(iT,2)).AnalogData.General.Gen1;
     
         % CodeNumbers: 20 for Stim Onset, 25 for Blank After Stim Off
-        data(indTrial_bhv).BehavioralCodes.CodeNumbers == 20
-    
-    
+        stimOn = round(data(indTrial_bhv).BehavioralCodes.CodeTimes(data(indTrial_bhv).BehavioralCodes.CodeNumbers == 20));
+        stimOff = round(data(indTrial_bhv).BehavioralCodes.CodeTimes(data(indTrial_bhv).BehavioralCodes.CodeNumbers == 55));
+        tempPupilSig_stimOn{iT} = tempPupilSig{iT}(stimOn:stimOff);
     end
+    
+        setMarkers = {'o', '^', 'sq', 'x', '+'};     
+    cMap_trial = hsv(size(tS_session_stim(iCell, iStim).matTS_norm, 2));
     fig_pupil = figure;
     set(gca, 'ColorOrder', cMap_trial)
     hold on;
     for iT = 1:length(tempPupilSig)
         figure(fig_pupil);
-        plot(tempPupilSig{iT})
+        plot(tempPupilSig{iT}, 'o-', 'Marker', setMarkers{mod(iT, 5)+1}, 'Color', cMap_trial(iT,:));
         hold on;
     end
     
+    for iT = 1:length(tempPupilSig_stimOn)
+        y = tempPupilSig_stimOn{iT};
+        x = [1:length(y)]';
+        p = polyfit(x, y, 1);
+        matSlope(iT, :) = p;
+    end    
+    setValidTrial = find(matSlope(:,1)<-0.0001);
+    
+    setMarkers = {'o', '^', 'sq', 'x', '+'};
+    cMap_trial = hsv(size(tS_session_stim(iCell, iStim).matTS_norm, 2));
+    fig_ts = figure;
+%     set(groot, 'DefaultAxesColorOrder', hsv(4), 'DefaultAxesLineStyleOrder', '-|--|:');
+    set(gca, 'ColorOrder', cMap_trial);
+    hold on;
+    for iTrial = 1:length(setValidTrial) %size(tS_session_stim(iCell, iStim).matTS_norm, 2)
+        idTrial = setValidTrial(iTrial);
+        figure(fig_ts);
+        plot([-1:0.1:3.5], tS_session_stim(iCell, iStim).matTS_norm(:, idTrial), 'o-', 'Marker', setMarkers{mod(iTrial, 5)+1}, 'Color', cMap_trial(iTrial,:));
+        hold on
+    end
     
     % get the info for concatenated runs & exp types
     load(fullfile(dirProcdata_session, '_preproc', 'ConcatRuns_BPM_DFL.mat'), 'paramConcat');
