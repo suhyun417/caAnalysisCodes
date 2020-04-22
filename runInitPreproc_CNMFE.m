@@ -24,17 +24,18 @@ setSubj ={'Tabla', 'Max'};
 
 % Optional params for each subject
 paramCrop(1).flagCrop = 1;
-paramCrop(1).coordsCrop = [20 320 1 270]; % for Tabla_FOV1 [Xstart, Xend, Ystart, Yend] for cropping
+% paramCrop(1).coordsCrop = [20 320 1 270]; % for Tabla_FOV1 [Xstart, Xend, Ystart, Yend] for cropping
+paramCrop(1).coordsCrop = [26 314 20 270]; % for Tabla_FOV3 [Xstart, Xend, Ystart, Yend] for cropping
 paramCrop(2).flagCrop = 1;
 % paramCrop(2).coordsCrop = [24 235 4 267]; % %for Max_FOV2 [Xstart, Xend, Ystart, Yend] for cropping
-paramCrop(2).coordsCrop = [41 336 17 261]; % %for Max_FOV2 [Xstart, Xend, Ystart, Yend] for cropping
+paramCrop(2).coordsCrop = [41 336 17 261]; % %for Max_FOV3 [Xstart, Xend, Ystart, Yend] for cropping
 flagBPF = 1;
 % flagNoRMC = 0; % non-rigid body correction is optional
 flagSaveFigure = 1;
 dirFig = '/projects/parksh/0Marmoset/Ca/_labNote/_figs/';
 
 % dateSession = '20191113'; % '20191223'; %'20191219'; %'20191125'; %'20191126'; %'20191114'; %'20191112';
-for iSubj = 2 %1:length(setSubj)
+for iSubj = 1 %1:length(setSubj)
     nameSubj = setSubj{iSubj};
     
     % get session info

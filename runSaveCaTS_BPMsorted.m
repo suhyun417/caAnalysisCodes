@@ -68,7 +68,7 @@ for iSubj = 1:length(setNameSubj)
         stimTiming_BPM = struct([]);
         for iRun = 1:length(tSeries_BPM)
             
-            load(fullfile(dirProcdata_session, sprintf('BPM_%d_tML.mat', iRun)), 't_adj', 'infoTrial', 'analog')
+            load(fullfile(dirProcdata_session, sprintf('BPM_%d_tML.mat', iRun)), 't', 't_adj', 'infoTrial', 'analog')
             
             validT = find(t_adj.trialStart>0);
             
@@ -88,6 +88,13 @@ for iSubj = 1:length(setNameSubj)
             stimTiming_BPM(iRun).locCaFrame.trialStart = locFrameTrialStart;
             stimTiming_BPM(iRun).locCaFrame.stimOn = locFrameStimOn;
             stimTiming_BPM(iRun).locCaFrame.blankOn_afterStim = locFrameBlankOn_afterStim;
+            
+            stimTiming_BPM(iRun).t_org.sendTTL = t.sendTTL;
+            stimTiming_BPM(iRun).t_org.startCa = t.startCa;
+            stimTiming_BPM(iRun).t_org.trialStart = t.trialStart(validT);
+            stimTiming_BPM(iRun).t_org.blankOnset_beforeStim = t.blankOnset_beforeStim(validT);
+            stimTiming_BPM(iRun).t_org.stimOnset = t.stimOnset(validT);
+            stimTiming_BPM(iRun).t_org.blankOnset_afterStim = t.blankOnset_afterStim(validT);
             
             stimTiming_BPM(iRun).analog = analog;
             
@@ -148,10 +155,12 @@ for iSubj = 1:length(setNameSubj)
         % record the Run identity for later
         idRunTrial = [];
         for iRun = 1:length(stimTiming_BPM)
-            idRunTrial = cat(1, idRunTrial, cat(2, ones(size(stimTiming_BPM(iRun).indValidTrial)).*iRun, stimTiming_BPM(iRun).indValidTrial));
+            idRunTrial = cat(1, idRunTrial, cat(2, ones(size(stimTiming_BPM(iRun).indValidTrial)).*iRun, [1:length(stimTiming_BPM(iRun).indValidTrial)]', ...
+                stimTiming_BPM(iRun).indValidTrial, stimTiming_BPM(iRun).indValidTrial_orgBhv));
         end
         tS_session = struct([]);
         tS_session(1).idRunTrial = idRunTrial;
+        tS_session(1).idRunTrial_description = 'Run number, Trial index in this file within each Run, Trial index in tML.mat file, Trial index in original bhv file';
         tS_session(1).idStim = cat(1, stimTiming_BPM.idStim);
         % tS_session(1).nameCondition = cat(1, stimTiming_BPM.infoStim);
         tS_session(1).tS_trial = cat(2, tS_run.tS_trial); % Cell by Trial

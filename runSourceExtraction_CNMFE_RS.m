@@ -18,15 +18,17 @@ nameSubj = 'Tabla'; %'Max'; %'Tabla'; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; % 'Ma
 
 [c, ia, indRun] = unique(infoSession.(1), 'sorted');
 setDateSession = c(2:end); % 1st one is always empty
-
-switch lower(nameSubj)
-    case 'tabla'
-        startSession = 1;
-    case 'max'
-        startSession = 1; %2;
-end
+% 
+% switch lower(nameSubj)
+%     case 'tabla'
+%         startSession = 1;
+%     case 'max'
+%         startSession = 1; %2;
+% end
  
-for iSession = 1:5 %length(setDateSession) %startSession:length(setDateSession)
+clear infoSession
+
+for iSession = 1:length(setDateSession) %startSession:length(setDateSession)
 
     dateSession = setDateSession{iSession};
     
@@ -34,7 +36,7 @@ for iSession = 1:5 %length(setDateSession) %startSession:length(setDateSession)
     dirPreproc = fullfile(dirProcdata_session, '_preproc');
     
     % filename
-    fname = fullfile(dirPreproc, 'ConcatRuns_RS.tif');
+    fname = fullfile(dirPreproc, 'ConcatRuns_RS.mat');
     [p, n, ext] = fileparts(fname);
     
     if isempty(dir(fullfile(p, [n '_source_extraction'], 'Sources2D_RS*.mat'))) %~exist(fullfile(p, [n '_source_extraction']), 'dir')
@@ -44,7 +46,11 @@ for iSession = 1:5 %length(setDateSession) %startSession:length(setDateSession)
         
         fname_mat = fullfile(p, [n '.mat']); %'/procdata/parksh/_marmoset/invivoCalciumImaging/Tabla/Session/20191119/_preproc/ConcatRuns_BPM_DFL.mat'
         matObj = matfile(fname_mat);
-        Y = matObj.Y(1:matObj.Ysiz(1,1), 1:matObj.Ysiz(2,1), 1:1000);
+        setFrame = 1:1000;
+        if strcmp(dateSession, '20191114')
+            setFrame = 6001:7000;
+        end
+        Y = matObj.Y(1:matObj.Ysiz(1,1), 1:matObj.Ysiz(2,1), setFrame);
         
         options.d1 = size(Y,1);
         options.d2 = size(Y,2);
@@ -57,12 +63,16 @@ for iSession = 1:5 %length(setDateSession) %startSession:length(setDateSession)
         sortPNR = sort(PNR(:));
         sortCn = sort(Cn(:));
         
-        paramCNMFE.critPNR = 0.95;
+        paramCNMFE.critPNR = 0.9; %0.95;
         paramCNMFE.sortPNR = sortPNR;
         paramCNMFE.min_pnr = sortPNR(round(length(sortPNR).*paramCNMFE.critPNR));
-        paramCNMFE.critCn = 0.95;
+        paramCNMFE.critCn = 0.9; %0.95;
         paramCNMFE.sortCn = sortCn;
         paramCNMFE.min_corr = sortCn(round(length(sortCn).*paramCNMFE.critCn));
+        fprintf(1, 'Session %d/%d (%s): min_pnr = %2.2f, min_corr = %2.2f ...\n', ...
+            iSession, length(setDateSession), dateSession, paramCNMFE.min_pnr, paramCNMFE.min_corr);
+        
+        clear Y Cn PNR sort*
         
 %         critPNR.crit95(iSession,1) = sortPNR(round(length(sortPNR).*0.95));
 %         critPNR.crit90(iSession,1) = sortPNR(round(length(sortPNR).*0.90));
@@ -73,7 +83,7 @@ for iSession = 1:5 %length(setDateSession) %startSession:length(setDateSession)
         paramCNMFE.ssub = 1;
         paramCNMFE.memory_size_to_use = 30; %  64, ... % GB, memory space you allow to use in MATLAB
         paramCNMFE.memory_size_per_patch = 3; % ... 0.5, ...   % GB, space for loading data within one patch
-        paramCNMFE.patch_dims = [64, 64]; %,...  %GB, patch size
+        paramCNMFE.patch_dims = [50, 50]; %[64, 64]; %,...  %GB, patch size
 %         paramCNMFE.batch_frames = 8000;
         paramCNMFE.Fs = 10;
         paramCNMFE.tsub = 1;
@@ -89,7 +99,7 @@ for iSession = 1:5 %length(setDateSession) %startSession:length(setDateSession)
         
         [p, n, ext] = fileparts(fname);
         neuron.P.log_folder = fullfile(p, [n '_source_extraction']);
-        file_path = fullfile(neuron.P.log_folder,  ['Sources2D_RS_', strrep(get_date(), ' ', '_'), '.mat']);
+        file_path = fullfile(neuron.P.log_folder,  ['Sources2D_RS_nobatch_residualOn_', strrep(get_date(), ' ', '_'), '.mat']);
         
         save(file_path, 'neuron', 'paramCNMFE', '-v7.3');
         

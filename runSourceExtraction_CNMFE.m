@@ -28,7 +28,7 @@ setDateSession = c(2:end); % 1st one is always empty
 
 clear infoSession
  
-for iSession = 2 %1:length(setDateSession) %startSession:length(setDateSession)
+for iSession = 1:length(setDateSession) %startSession:length(setDateSession)
 
     dateSession = setDateSession{iSession};
     

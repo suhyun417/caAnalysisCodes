@@ -30,7 +30,7 @@ for iSubj = 1 %1:length(setNameSubj)
         dirProcdata_session_preproc = fullfile(dirProcdata_session, '_preproc');
         
         % List of runs to process: get the info from the xls file
-        locRun_session = find((contains(infoSession.(1), dateSession).*(infoSession.(6)>0)));
+        locRun_session = find((contains(infoSession.(1), dateSession).*(infoSession.(6)>0).*contains(infoSession.(3), 'RS')));
         
         listRun = infoSession.(2)(locRun_session);
         listFileName = strcat(fullfile(dirProcdata_session_preproc, listRun), '*_mc.tif');
@@ -39,10 +39,10 @@ for iSubj = 1 %1:length(setNameSubj)
         %     listFileName{iFile, 1} = fullfile(;
         % end
         
-        fname_cat = fullfile(dirProcdata_session_preproc, 'ConcatRuns_all');
+        fname_cat = fullfile(dirProcdata_session_preproc, 'ConcatRuns_RS');
         
         if ~exist([fname_cat, '.mat'], 'file')
-            fprintf(1, 'Session %d/%d: %s: Concatenating all runs..\n', iSession, nSession, dateSession)
+            fprintf(1, 'Session %d/%d: %s: Concatenating RS runs..\n', iSession, nSession, dateSession)
             tic; doConcatRuns(listFileName, fname_cat); toc;
             fprintf(1, 'Session %d/%d: %s: ............................Done!\n', iSession, nSession, dateSession)
             
@@ -54,7 +54,7 @@ for iSubj = 1 %1:length(setNameSubj)
             
             clear list* loc*
         else
-            fprintf(1, 'Session %d/%d: %s: ConcatRuns_all.mat already exists.\n', iSession, nSession, dateSession)
+            fprintf(1, 'Session %d/%d: %s: ConcatRuns_RS.mat already exists.\n', iSession, nSession, dateSession)
         end
         
         

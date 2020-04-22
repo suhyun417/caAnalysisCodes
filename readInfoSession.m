@@ -26,6 +26,7 @@ end
 switch lower(nameSubj)
     case 'tabla'
         fname_infoSession = fullfile(dirProjects, '0Marmoset/Ca/infoSession_Tabla_FOV1.xlsx');
+%         fname_infoSession = fullfile(dirProjects, '0Marmoset/Ca/infoSession_Tabla_FOV3.xlsx');
     case 'max'
         fname_infoSession = fullfile(dirProjects, '0Marmoset/Ca/infoSession_Max_FOV3.xlsx');
 %         fname_infoSession = fullfile(dirProjects, '0Marmoset/Ca/infoSession_Max_FOV2.xlsx');

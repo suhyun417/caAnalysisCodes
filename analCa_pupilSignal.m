@@ -10,10 +10,12 @@ if ~isempty(strfind(ss, 'Volume')) % if it's local
     dirProjects = '/Volumes/PROJECTS/parksh';
     dirProcdata = '/Volumes/PROCDATA/parksh';
     dirRawdata = '/Volumes/rawdata/parksh';
+    dirRawdata_archive = '/Volumes/archive_rawdata1/parksh';
 else % on virtual machine
     dirProjects = '/projects/parksh';
     dirProcdata = '/procdata/parksh';
     dirRawdata = '/rawdata/parksh';
+    dirRawdata_archive = '/archive_rawdata1/parksh';
 end
 
 
@@ -22,7 +24,7 @@ setNameSubj = {'Tabla', 'Max'};
 dirSave{1} = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/Tabla/FOV1');
 dirSave{2} = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/Max/FOV3');
 
-nameSubj =  'Max'; %'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+nameSubj =  'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 % dateSession = '20191113'; %'20191125';  
     
 % get session info
@@ -33,24 +35,114 @@ setDateSession = c(2:end); % 1st one is always empty
 nSession = length(setDateSession);
 
 % for iSession = 1:nSession
-    iSession = 3;
+    iSession = 1; %3;
     dateSession = setDateSession{iSession};
     
-    dirProcdata_session = fullfile('/procdata/parksh/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-    dirPreproc = fullfile(dirProcdata_session, '_preproc');
+    dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
     if str2num(dateSession) < 20191121
-        dirBHV = '/archive_rawdata1/parksh/behavior/MonkeyLogic_Ca/'; %
+        dirBHV = [dirRawdata_archive, '/behavior/MonkeyLogic_Ca/']; %
     else
-        dirBHV = '/rawdata/parksh/behavior/MonkeyLogic_Ca/'; %
+        dirBHV = [dirRawdata, '/behavior/MonkeyLogic_Ca/']; %
     end
     dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
     
+    % get the info for concatenated runs & exp types
+    load(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/_preproc/ConcatRuns_BPM_DFL.mat', ...
+        nameSubj, dateSession)), 'paramConcat');
+    infoSession = paramConcat.infoSession;
+    catExpName = cellstr(cat(1, infoSession.ExpName));
+    indBPM = find(contains(catExpName, 'BPM')>0);
+       
+    % load and plot the cell time series to check
+    load(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession)), ...
+        'stimTiming_BPM', 'tS_session')
+%     indTrial_org = cat(2, tS_session(1).idRunTrial(:,1), cat(1, stimTiming_BPM.indValidTrial_orgBhv));
+    tS_trial_session = tS_session(1).tS_trial;
     
+    for iTrial = 1:size(tS_trial_session, 2)
+    
+        % population response
+        tempTS = cat(2, tS_trial_session(:,iTrial).matTS_norm);
+        
+        indRun = tS_session(1).idRunTrial(iTrial,1); %indTrial_org(iTrial,1);
+%         indTrial = indTrial_org(iTrial,2);
+        clear data tempEye
+        
+        % retrieve and quantify eye signal
+        tempEye = stimTiming_BPM(indRun).analog.eye(round(stimTiming_BPM(indRun).t_org.stimOnset(iTrial)):round(stimTiming_BPM(indRun).t_org.blankOnset_afterStim(iTrial)), :);
+        tempEye(tempEye<-5) = NaN;
+        
+        propLoss = sum(isnan(tempEye))./size(tempEye,1);
+        x = [1:size(tempEye,1)]';
+        p = polyfit(x, tempEye(:,3), 1);
+        f = polyval(p, x);        
+
+        %         fname_bhv = fullfile(dirBHV, [infoSession(indBPM(indRun)).MLFilename '.bhv2']);
+%         [data] = mlread(fname_bhv);
+%         stimOn = round(data(indTrial).BehavioralCodes.CodeTimes(data(indTrial).BehavioralCodes.CodeNumbers == 20));
+%         stimOff = round(data(indTrial).BehavioralCodes.CodeTimes(data(indTrial).BehavioralCodes.CodeNumbers == 55));
+%         tempEye = data(indTrial).AnalogData.Eye(stimOn:stimOff, :);
+%         tempPS = data(indTrial).AnalogData.General.Gen1(stimOn:stimOff); %
+%         tempPS(tempPS<-5) = NaN;
+        
+        figure(101); set(gcf, 'Color', 'w'); clf;
+        sp(1) = subplot('Position', [0.05 0.6 0.5 0.35]);
+        plot(tempEye(:, 1:2))
+        legend('x', 'y')
+        title(sp(1), 'Eye gaze during stimulus presentation')
+        
+        sp(2) = subplot('Position', [0.05 0.15 0.5 0.35]);
+        plot(tempEye(:, 3));
+        hold on;
+        plot(x, f, 'r');
+        legend('pupil', 'polyfit')
+        title(sp(2), 'Pupil size change during stimulus presentation')
+        xlabel('Time (ms)')
+        
+        sp(3) = subplot('Position', [0.65 0.15 0.3 0.8]);
+        plot([-1:0.1:3.5], tempTS);
+        xlabel('Time from stimulus onset (s)')
+        ylabel('Norm. resp. (z)')
+        title(sp(3), sprintf('%s %s: Trial #%d: Stimulus ID %d', nameSubj, dateSession, iTrial, tS_trial_session(1,iTrial).idStim))
+        
+        axis(sp(:), 'tight');
+        text(sp(2), 1, max(get(sp(2), 'YLim')), sprintf('slope = %2.3f', p(1)), 'VerticalAlignment', 'top');
+        
+        input('')
+        
+    end
+    
+    
+    
+    
+    
+            x = [1:length(y)]';
+        p = polyfit(x, y, 1);
+    
+    tempPupilSig = {};
+    for iT = 1:length(tS_session_stim(iCell, iStim).indTrial_org)
+        indRun = tS_session_stim(iCell, iStim).indTrial_org(iT,1);
+        indTrial_bhv = stimTiming_BPM(indRun).indValidTrial_orgBhv(tS_session_stim(iCell, iStim).indTrial_org(iT,2));
+        
+        fname_bhv = fullfile(dirBHV, [infoSession(indBPM(indRun)).MLFilename '.bhv2']);
+        [data] = mlread(fname_bhv);
+        tempPupilSig{iT} = data(indTrial_bhv).AnalogData.General.Gen1; %data(tS_session_stim(iCell, iStim).indTrial_org(iT,2)).AnalogData.General.Gen1;
+        
+        % CodeNumbers: 20 for Stim Onset, 25 for Blank After Stim Off
+        stimOn = round(data(indTrial_bhv).BehavioralCodes.CodeTimes(data(indTrial_bhv).BehavioralCodes.CodeNumbers == 20));
+        stimOff = round(data(indTrial_bhv).BehavioralCodes.CodeTimes(data(indTrial_bhv).BehavioralCodes.CodeNumbers == 55));
+        tempPupilSig_stimOn{iT} = tempPupilSig{iT}(stimOn:stimOff);
+    end
+    
+    
+    
+    
+    %%
     % load and plot the cell time series to check
     load(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession)), ...
         'tS_session_stim', 'stimTiming_BPM');
-    iCell = 21; %82;
-    iStim = 13; %23;
+    iCell = 82; %21; %82;
+    iStim = 23; %13; %23;
     
     setMarkers = {'o', '^', 'sq', 'x', '+'};     
     cMap_trial = hsv(size(tS_session_stim(iCell, iStim).matTS_norm, 2));
@@ -133,8 +225,7 @@ nSession = length(setDateSession);
     for iRun = 1:length(indBPM)
         
     fname_bhv = fullfile(dirBHV, [infoSession(indBPM(iRun)).MLFilename '.bhv2']);
-    [data, MLConfig, TrialRecord] = mlread(fname_bhv);
-    
+    [data, MLConfig, TrialRecord] = mlread(fname_bhv);    
     
     figure(200);
     set(gcf, 'Color', 'w')
