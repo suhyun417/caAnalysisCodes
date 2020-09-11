@@ -15,7 +15,7 @@ end
 
 
 nameSubj = 'Tabla';
-dateSession = '20191113';
+dateSession = '20191125'; % '20191113';
 
 dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
 dirPreproc = fullfile(dirProcdata_session, '_preproc');
