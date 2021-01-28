@@ -15,7 +15,7 @@ else % on virtual machine
     dirProjects = '/projects/parksh';
     dirProcdata = '/procdata/parksh';
     dirRawdata = '/rawdata/parksh';
-    dirRawdata_archive = '/archive_rawdata1/parksh';
+    dirRawdata_archive = '/rawdata_archive1/parksh';
 end
 
 
