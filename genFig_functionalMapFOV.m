@@ -17,7 +17,7 @@ else % on virtual machine
 end
 
 setNameSubj = {'Tabla', 'Max'};
-flagSavePPTX = 1;
+flagSavePPTX = 0; %1;
 
 
 % % for iSubj = 1:2

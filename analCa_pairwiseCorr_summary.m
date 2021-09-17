@@ -112,18 +112,18 @@ for iSession = 1:length(resultsCov)
         end
 end
 
-figure(fig_highCorrPairs);
-subplot(1, length(resultsCorr), iType); %
-imagesc(imgFOV); colormap(gray);
-hold on
-plot(center(:,2), center(:,1), 'w.'); hold on;
-% set(gca, 'YDir', 'reverse'); hold on;
-for iPair = 1:size(setPairHighR, 1)
-    plot(center(setPairHighR(iPair, :), 2), center(setPairHighR(iPair, :), 1), 'o-', ...
-        'Color', cMap_highR(iPair,:), 'MarkerFaceColor', cMap_highR(iPair,:), 'MarkerEdgeColor', 'none')
-    hold on;
-end
-xlabel(resultsCorr(iType).nameCond)
+% figure(fig_highCorrPairs);
+% subplot(1, length(resultsCorr), iType); %
+% imagesc(imgFOV); colormap(gray);
+% hold on
+% plot(center(:,2), center(:,1), 'w.'); hold on;
+% % set(gca, 'YDir', 'reverse'); hold on;
+% for iPair = 1:size(setPairHighR, 1)
+%     plot(center(setPairHighR(iPair, :), 2), center(setPairHighR(iPair, :), 1), 'o-', ...
+%         'Color', cMap_highR(iPair,:), 'MarkerFaceColor', cMap_highR(iPair,:), 'MarkerEdgeColor', 'none')
+%     hold on;
+% end
+% xlabel(resultsCorr(iType).nameCond)
     
 nc = 30;
 edges = -1:0.1:1;

@@ -29,7 +29,7 @@ nSession = length(setDateSession);
 clear infoSession
 
 
-flagSavePPTX = 1; % 1 if you want to save figures to PPTX
+flagSavePPTX = 0; %1; % 1 if you want to save figures to PPTX
 
 for iSession = 1:length(setDateSession)
     

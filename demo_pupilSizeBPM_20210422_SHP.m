@@ -41,8 +41,8 @@ for iSubj = 1:length(setSubjName)
         
         %% For each trial
         % checking valid trials: first, based on "TrialError" parameter
-        locValidTrials = find(cat(1, data.TrialError)>1); % excluding the first trial becuase it's repeated as the last trial
-        if sum(ismember(locValidTrials, 1))>0
+        locValidTrials = find(cat(1, data.TrialError)>1); 
+        if sum(ismember(locValidTrials, 1))>0 % excluding the first trial becuase it's repeated as the last trial
             locValidTrials = locValidTrials(~ismember(locValidTrials,1));
         end
         
@@ -78,13 +78,15 @@ for iSubj = 1:length(setSubjName)
             p = polyfit(x, tempEye-baseline, 1);
             f = polyval(p, x);
             
-%             figure(101); set(gcf, 'Color', 'w'); clf;
-%                 plot(tempEye-baseline);
-%                 hold on;
-%                 plot(x, f, 'r');
-%                 legend('pupil', 'polyfit')
-%                 title('Pupil size change during stimulus presentation')
-%                 xlabel('Time (ms)')
+            figure(101); set(gcf, 'Color', 'w'); clf;
+                plot(tempEye-baseline);
+                hold on;
+                plot(x, f, 'r');
+                legend('pupil', 'polyfit')
+                title('Pupil size change during stimulus presentation')
+                xlabel('Time (ms)')
+                
+                input('')
             
             if p(1) < -0.0001 && mean(tempEye(400:500)-baseline)<0 % include trials with decreasing trend of pupil size change (constriction upon stimulus presentation)                        
                 
