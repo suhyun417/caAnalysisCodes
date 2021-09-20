@@ -55,7 +55,7 @@ iSubj = 1; %
         % TRIG onset = 900; TRIG offset = 990; (TTL from ML to Inscopix DAQ On & Off)
         locStimOn = find(data.BehavioralCodes.CodeNumbers == 40);
         time_stimOn = floor(data.BehavioralCodes.CodeTimes(locStimOn))
-        data.AnalogData
+%         data.AnalogData
         
         figure;
         plot(data.AnalogData.Eye, '.')

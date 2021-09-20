@@ -65,13 +65,14 @@ plot(center(:,2), center(:, 1), 'r.')
 text(center(:,2)+1, center(:,1), num2str([1:size(center,1)]'), 'Color', 'w');
 
 
-%% Possible cell selection?
+%% Cell quality check using SNR and PNR
 snrs = var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2);
 pnrs = max(neuron.C, [], 2)./std(neuron.C_raw-neuron.C, 0, 2);
 
 [a, sortedID_snr] = sort(snrs, 'descend');
 [aa, sortedID_pnr] = sort(pnrs, 'descend');
 
+% SNR distribution 
 figure
 histogram(snrs, 30)
 median(snrs)
@@ -80,14 +81,28 @@ xlabel('SNR')
 title(sprintf('%s: %s', nameSubj, dateSession))
 line([median(snrs) median(snrs)], get(gca, 'ylim'), 'Color', 'r')
 
+% Location of a particular set cells
+setCells_rank = length(sortedID_pnr)-9:length(sortedID_pnr); %1:10
+figure;
+imagesc(imgFOV);
+colormap(gray);
+hold on
+plot(center(sortedID_snr(setCells_rank), 2), center(sortedID_snr(setCells_rank), 1), 'r.')
+hold on
+text(center(sortedID_snr(setCells_rank), 2)+1, center(sortedID_snr(setCells_rank), 1)+1, num2str([setCells_rank]'), 'Color', 'r');
+text(center(sortedID_pnr(setCells_rank), 2)+3, center(sortedID_pnr(setCells_rank), 1)+3, num2str([setCells_rank]'), 'Color', 'g');
+plot(center(sortedID_pnr(setCells_rank), 2), center(sortedID_pnr(setCells_rank), 1), 'g.')
+axis off
+
+
 tY=[];
 nCell = 10;
 nTime = 1000;
 for iCell =1:nCell
 figure(100);
 hold on;
-plot(neuron.C_raw(sortedID_snr(iCell), 1:nTime)+15*(iCell-1), '-')
-tY(iCell) = mean(neuron.C_raw(sortedID_snr(iCell), 1:nTime)+15*(iCell-1));
+plot(neuron.C_raw(sortedID_snr(iCell), 1:nTime)+10*(iCell-1), '-')
+tY(iCell) = mean(neuron.C_raw(sortedID_snr(iCell), 1:nTime)+10*(iCell-1));
 end
 title('SNR-based sorting')
 set(gca, 'YTick', tY, 'YTickLabel', 1:nCell, 'TickDir', 'out')
@@ -101,8 +116,8 @@ nTime = 1000;
 for iCell =1:nCell
 figure(200);
 hold on;
-plot(neuron.C_raw(sortedID_pnr(iCell), 1:nTime)+15*(iCell-1), '-')
-tY(iCell) = mean(neuron.C_raw(sortedID_pnr(iCell), 1:nTime)+15*(iCell-1));
+plot(neuron.C_raw(sortedID_pnr(iCell), 1:nTime)+10*(iCell-1), '-')
+tY(iCell) = mean(neuron.C_raw(sortedID_pnr(iCell), 1:nTime)+10*(iCell-1));
 end
 title('PNR-based sorting')
 set(gca, 'YTick', tY, 'YTickLabel', 1:nCell, 'TickDir', 'out')
@@ -112,253 +127,212 @@ ylabel('Cell order')
 
 
 
-%% From movie: covariation
+
+
+%% Movie-driven signal
 load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', nameSubj, dateSession))
 
-ts = struct([]);
-iMovie = 1;
-for iCell = 1:size(tS_session(iMovie).avgTS, 2)
+% snrs = var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2);
+% pnrs = max(neuron.C, [], 2)./std(neuron.C_raw-neuron.C, 0, 2);
+% 
+% [a, sortedID_snr] = sort(snrs, 'descend');
+% [aa, sortedID_pnr] = sort(pnrs, 'descend');
+
+setCell = 1:10; %length(sortedID_pnr)-9:length(sortedID_pnr); %1:10; %11:20; %10; 
+tY = []; ttY = [];
+figMovie_snr = figure;
+set(figMovie_snr, 'Position', [675    31   660   930], 'name', sprintf('%s %s: PNR based sorting', nameSubj, dateSession))
+SP(1) = subplot(1,2,1);
+SP(2) = subplot(1,2,2);
+hold(SP(:), 'on');
+
+for iCell = 1:length(setCell)
+    idCell = setCell(iCell);
+    figure(figMovie_snr);
+    plot(SP(1), squeeze(tS_session(1).matTS(:, sortedID_snr(idCell), :))+10*(iCell-1), '-'); 
+    tY(iCell) = mean(mean(squeeze(tS_session(1).matTS(:, sortedID_snr(idCell), :))+10*(iCell-1)));
     
-    curMatTS = squeeze(tS_session(iMovie).matTS_norm(:,iCell,:));
-    avgMatTS = tS_session(iMovie).avgTS_norm(:,iCell);
-    steMatTS = std(curMatTS, [], 2)./sqrt(size(curMatTS, 2)-1);
-    
-    ts(iCell).avgMatTS = avgMatTS;
-    ts(iCell).steMatTS = steMatTS;
-    
-    % figure(100);clf;
-    % subplot(2,1,1)
-    % plot(curMatTS); axis tight
-    % title(sprintf('Cell #%d/%d', iCell, size(tS_session(iMovie).avgTS, 2)))
-    % subplot(2,1,2)
-    % plot(avgMatTS, 'k'); axis tight
-    % line(repmat(1:length(avgMatTS), 2, 1), cat(2, avgMatTS+steMatTS, avgMatTS-steMatTS)', 'Color', 'c')
-    
-    % input('')
+    plot(SP(2), squeeze(tS_session(2).matTS(:, sortedID_snr(idCell), :))+10*(iCell-1), '-'); 
+    ttY(iCell) = mean(mean(squeeze(tS_session(2).matTS(:, sortedID_snr(idCell), :))+10*(iCell-1)));
 end
+set(SP, 'YTick', tY, 'YTickLabel', setCell, 'TickDir', 'out')
+set(SP, 'XTick', 200:200:1200,  'XTickLabel', [200:200:1200]./10);
+axis(SP, 'tight')
+xlabel(SP, 'Time (s)')
+ylabel(SP(1), 'Cell')
+title(SP(1), 'Movie 1')
+title(SP(2), 'Movie 2')
 
-% %% Consistency across trials
-catAvgMatTS = cat(2, ts.avgMatTS); % driven activity, averaged across trials
-catSteMatTS = cat(2, ts.steMatTS);
+%pnr
+setCell = length(sortedID_pnr)-9:length(sortedID_pnr);  %1:10; %11:20; %10; 
+tY = []; ttY = [];
+figMovie_pnr = figure;
+set(figMovie_pnr, 'Position', [675    31   660   930], 'name', sprintf('%s %s: PNR based sorting', nameSubj, dateSession))
+SP(1) = subplot(1,2,1);
+SP(2) = subplot(1,2,2);
+hold(SP(:), 'on');
 
-[coeff, score, latent, tsquared, explained] = pca(catAvgMatTS');
-
-k = 4;
-[IDXdfl, C, SUMD] = kmeans(catAvgMatTS', k, 'Distance', 'correlation');
-[sortedIDXdfl, indCelldfl] = sort(IDXdfl);
-clear indCell_sort
-for iType = 1:k
-    indCell_sort{iType} = indCelldfl(sortedIDXdfl==iType);
+scalefac = 10;
+for iCell = 1:length(setCell)
+    idCell = setCell(iCell);
+    figure(figMovie_pnr);
+    plot(SP(1), squeeze(tS_session(1).matTS(:, sortedID_pnr(idCell), :))+scalefac*(iCell-1), '-'); 
+    tY(iCell) = mean(mean(squeeze(tS_session(1).matTS(:, sortedID_pnr(idCell), :))+scalefac*(iCell-1)));
+    
+    plot(SP(2), squeeze(tS_session(2).matTS(:, sortedID_pnr(idCell), :))+scalefac*(iCell-1), '-'); 
+    ttY(iCell) = mean(mean(squeeze(tS_session(2).matTS(:, sortedID_pnr(idCell), :))+scalefac*(iCell-1)));
 end
+set(SP, 'YTick', tY, 'YTickLabel', setCell, 'TickDir', 'out')
+set(SP, 'XTick', 200:200:1200,  'XTickLabel', [200:200:1200]./10);
+axis(SP, 'tight')
+xlabel(SP, 'Time (s)')
+ylabel(SP(1), 'Cell')
+title(SP(1), 'Movie 1')
+title(SP(2), 'Movie 2')
 
-% Plotting
-fig_summary_DFL = figure;
-set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
-clear sp
 
-% 1. averaged amplitude for each condition
-figure(fig_summary_DFL);
-sp(1) = subplot('Position', [0.2 0.65 0.75 0.3]);
-imagesc(catAvgMatTS(:, indCelldfl)');
-colormap(hot);
-set(sp(1), 'CLim', [-1 1].*4)
-set(sp(1), 'YTick', find(diff(sortedIDXdfl)>0), 'YTickLabel', [])
-set(sp(1), 'XTick', 200:200:1200, 'XTickLabel', 20:20:120)
-set(sp(1), 'TickDir', 'out')
-box off
-colorbar;
-title(sprintf('%s %s: averaged response to movie %s', nameSubj, dateSession, tS_session(iMovie).idStim))
-ylabel('Cells (sorted)')
-xlabel('Time (s)')
+%% pupil size change
+% part of eye data is not great. decided to focus on the later half of the
+% first movie, which contains body motion, object motion, face
 
-% 2. Clustering results on 2-d PC space
-figure(fig_summary_DFL);
-sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
-cMap_sort = hsv(k);
-
-for iType = 1:k
-        plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
-        hold on;
-end
-legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5', 'Location', 'best')
-xlabel(sprintf('PC 1: explained %2.2f %% var', explained(1)))
-ylabel(sprintf('PC 2: explained %2.2f %% var', explained(2)))
-set(gca, 'TickDir', 'out')
-box off
-axis square
-title('Clustering based on movie response on PC space')
-
-% 3. Clustering results on imaging field of view
-figure(fig_summary_DFL);
-sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
-cMap_sort = hsv(k);
-
-imagesc(imgFOV); 
-colormap(sp(3), gray);
-hold on;
-for iType = 1:k
-    for iC = 1:size(indCell_sort{iType}, 1)
-        plot(Coor{indCell_sort{iType}(iC, 1)}(1,:), Coor{indCell_sort{iType}(iC, 1)}(2,:), '.', 'Color', cMap_sort(iType, :));
+    % get session info
+    [infoSession, opts] = readInfoSession(nameSubj);
+    S = table2struct(infoSession);
+    
+    % setExpName = {S.ExpName}';
+    setMLFilename = {S.MLFilename}';
+    
+    indDFLRuns = contains(setMLFilename, 'DFL') & cat(1, S.flagPreproc) > 0 & contains({S.stimulus}', 'set1_1'); %% containing "DFL" in filename AND flagPreproc value of 1
+    setFilename = setMLFilename(indDFLRuns);
+    
+    % Tabla
+    % 191113: eye signal not good (another range of x/y/pupil present during the first half)
+    % 191114 & 191118: eye signal good. Length of data points are 6-7ms shorter than 2min
+    % except the last run of 191118
+    % 191119: starting to lose x signal + y & pupil is bad in general
+    % 191120: x is lost, y& pupil was good in the first run, but not in the
+    % others
+    % 191121: x is lost, length of data points are 6-7ms shorter than 2min, y
+    % & pupil bad in some runs
+   % 191125: x is lost, for the first file signals look okay & length is fine 
+   
+    
+    for iFile = 1:length(setFilename)
+        filename = strcat(setFilename{iFile}, '.bhv2');
+        
+        dateSession = filename(1:6);
+        
+        if str2num(dateSession) < 191121
+            dirBHV = '/archive_rawdata1/parksh/behavior/MonkeyLogic_Ca/'; %
+        else
+            dirBHV = '/rawdata/parksh/behavior/MonkeyLogic_Ca/'; %
+        end
+        
+        % filename = '191121_Tabla_Ca_BPM_123909.bhv2'; % change it to a file you have
+        
+        %% Read the file
+        data = mlread(fullfile(dirBHV, filename)); % mlread(filename);
+        
+        %% eye data during stimulus on 
+        % Event Code Numbers & Names : TASK_START = 10; FP_ON = 20;
+        % WAIT_FOR_TR = 30; MOVIE_ON = 40; REWARD = 90; 
+        % TRIG onset = 900; TRIG offset = 990; (TTL from ML to Inscopix DAQ On & Off)
+        locStimOn = find(data.BehavioralCodes.CodeNumbers == 40);
+        time_stimOn = floor(data.BehavioralCodes.CodeTimes(locStimOn))
+%         data.AnalogData
+        
+        figure;
+        plot(data.AnalogData.Eye, '.')
+        line([time_stimOn time_stimOn], get(gca, 'YLim'), 'Color', 'm')
+        title(sprintf('%s: x & y gaze', filename))
+        axis tight
+        xlabel('Time')
+        ylabel('Voltage')
+        legend('X', 'Y')
+        
+        figure;
+        plot(data.AnalogData.General.Gen1, 'g.')
+        line([time_stimOn time_stimOn], get(gca, 'YLim'), 'Color', 'm')
+        title(sprintf('%s: pupil size change', filename))
+        axis tight
+        xlabel('Time')
+        ylabel('Voltage')
+        
+        input('')
     end
+tempP = data.AnalogData.General.Gen1((time_stimOn:end));
+figure
+plot(tempP)
+plot(tempP(60001:120000))
+for iCell = 1:length(setCell)
+figure(200); hold on;
+idCell = setCell(iCell);
+plot(squeeze(tS_session(1).matTS(:, sortedID_pnr(idCell), 1))+scalefac*(iCell-1), '-');
+tY(iCell) = mean(mean(squeeze(tS_session(1).matTS(:, sortedID_pnr(idCell), 1))+scalefac*(iCell-1)));
 end
-axis off
+axis tight
+xlim([600 1200])
 
-% % for each run
-% fig_map = figure;
-% for iRun = 1:length(tSeries_DFL)
-% matTSnorm = zscore(tSeries_DFL(iRun).C_raw');
-% 
-% k = 5;
-% [IDX, C, SUMD] = kmeans(matTSnorm', k, 'Distance', 'correlation');
-% [sortedIDX, indCell] = sort(IDX);
-% 
-% 
-% clear indCell_sort
-% for iType = 1:k
-%     indCell_sort{iType} = indCell(sortedIDX==iType);
-% end
-% 
-% cMap_sort = hsv(k);
-% figure(fig_map);
-% subplot(1,length(tSeries_DFL),iRun);
-% imagesc(imgFOV); colormap(gray);
-% axis off
-% for iType = 1:k
-%     for iC = 1:size(indCell_sort{iType}, 1)
-%         figure(fig_map);
-%         hold on;
-%         plot(Coor{indCell_sort{iType}(iC, 1)}(1,:), Coor{indCell_sort{iType}(iC, 1)}(2,:), '.', 'Color', cMap_sort(iType, :));
-%     end
-% end
-% title(sprintf('DFL Run #%d', iRun))
-% 
-% end
 
-% end
-
-% if flagSavePPTX
-%     % save figures
-%     addpath(fullfile(dirProjects, '/_toolbox/exportToPPTX/'));
-%     addpath(fullfile(dirProjects, '/_toolbox/imagetools/'));
+%% OLD CODE: 1) consistency across trials, 2) clustering of averaged movie-driven responses
+% ts = struct([]);
+% iMovie = 1;
+% for iCell = 1:size(tS_session(iMovie).avgTS, 2)
 %     
-%     fname_pptx = sprintf('%s_ClusteringBPMDFL', nameSubj); % fullfile('procdata/parksh/_marmoset/invivoCalciumImaging/', nameSubj, 'FOV1', sprintf('%s.pptx', dateSession));
-%     exportFigsToPPTX(fname_pptx);
+%     curMatTS = squeeze(tS_session(iMovie).matTS_norm(:,iCell,:));
+%     avgMatTS = tS_session(iMovie).avgTS_norm(:,iCell);
+%     steMatTS = std(curMatTS, [], 2)./sqrt(size(curMatTS, 2)-1);
 %     
-% %     switch lower(nameSubj)
-% %         case 'tabla'
-% %             dest = '/procdata/parksh/_marmoset/invivoCalciumImaging/Tabla/FOV1';
-% %         case 'max'
-% %             dest = '/procdata/parksh/_marmoset/invivoCalciumImaging/Max/FOV3';
-% %     end
-%     movefile('./*.pptx', dirFig);
-% end
-
-% end
-
-
-
-%% BPM
-% % load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', nameSubj, dateSession))
-% load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
-% 
-% condName_BPM = {'human face', 'marmoset face', 	'marmoset body', 'scene', 'non familiar object', 'hands and catcher',...
-%     'phase scrambled', 'space scrambled', 'grating', 'random dot motion'};
-% 
-% setCond = [1 2 5 6 10]; %cat(2, 11:15, 21:25, 51
-% nImage = 5;
-% 
-% catCondMat = cat(1, stimTiming_BPM.condMat);
-% curSetCond = unique(catCondMat(:,1));
-% if sum(ismember(setCond, curSetCond))~=5
-%     setCond = curSetCond;
+%     ts(iCell).avgMatTS = avgMatTS;
+%     ts(iCell).steMatTS = steMatTS;
+%     
+%     % figure(100);clf;
+%     % subplot(2,1,1)
+%     % plot(curMatTS); axis tight
+%     % title(sprintf('Cell #%d/%d', iCell, size(tS_session(iMovie).avgTS, 2)))
+%     % subplot(2,1,2)
+%     % plot(avgMatTS, 'k'); axis tight
+%     % line(repmat(1:length(avgMatTS), 2, 1), cat(2, avgMatTS+steMatTS, avgMatTS-steMatTS)', 'Color', 'c')
+%     
+%     % input('')
 % end
 % 
-% setCondName = condName_BPM(setCond);
+% % %% Consistency across trials
+% catAvgMatTS = cat(2, ts.avgMatTS); % driven activity, averaged across trials
+% catSteMatTS = cat(2, ts.steMatTS);
 % 
-% % %% summary responses for each item
-% % matAmpCellStim = reshape(cat(1, tS_session_stim.avgAmp), size(tS_session_stim));
-% % figure;
-% % set(gcf, 'Color', 'w', 'Position', [680         602        1080         376])
-% % imagesc(matAmpCellStim')
-% % colormap(jet)
-% % set(gca, 'CLim', [-1 1])
-% % xlabel('Cells')
-% % ylabel('Stimulus')
-% % %         condName = {infoTrial.infoStim([1:6:25]).nameCondition};
-% % set(gca, 'YTickLabel', setCondName)
-% % 
-% % % Quick clustering
-% % k = 5;
-% % [IDX, C, SUMD] = kmeans(matAmpCellStim, k);
-% % [sortedIDX, indCell] = sort(IDX);
-% % figure; imagesc(matAmpCellStim(indCell, :)'); % quick check
-% % colormap(jet)
-% % set(gca, 'CLim', [-1 1])
-% % 
-% % % check the spatial clustering
-% % clear indCell_sort
-% % for iType = 1:k
-% %     indCell_sort{iType} = indCell(sortedIDX==iType);
-% % end
-% % 
-% % cMap_sort = hsv(k);
-% % fig_map = figure;
-% % imagesc(imgFOV); colormap(gray);
-% % axis off
-% % for iType = 1:k
-% %     for iC = 1:size(indCell_sort{iType}, 1)
-% %         figure(fig_map);
-% %         hold on;
-% %         plot(Coor{indCell_sort{iType}(iC, 1)}(1,:), Coor{indCell_sort{iType}(iC, 1)}(2,:), '.', 'Color', cMap_sort(iType, :));
-% %     end
-% % end
-% 
-% %%  for each category
-% matAmpCellStim = reshape(cat(1, tS_session_stim.avgAmp_norm), size(tS_session_stim));
-% catStimCondSession = floor(cat(1, tS_session_stim(1,:).idStim)./10);
-% matAmpCellCond = [];
-% for iCond = 1:length(setCond)
-%     idCond = setCond(iCond);
-%     ind = find(catStimCondSession == idCond);
-%     matAmpCellCond(:,iCond) = mean(matAmpCellStim(:,ind), 2);
-% end
-% 
-% [coeff, score, latent, tsquared, explained] = pca(matAmpCellCond);
-% cumsum(explained);
+% [coeff, score, latent, tsquared, explained] = pca(catAvgMatTS');
 % 
 % k = 4;
-% [IDX, C, SUMD] = kmeans(matAmpCellCond, k);
-% [sortedIDX, indCell] = sort(IDX);
+% [IDXdfl, C, SUMD] = kmeans(catAvgMatTS', k, 'Distance', 'correlation');
+% [sortedIDXdfl, indCelldfl] = sort(IDXdfl);
 % clear indCell_sort
 % for iType = 1:k
-% indCell_sort{iType} = indCell(sortedIDX==iType);
+%     indCell_sort{iType} = indCelldfl(sortedIDXdfl==iType);
 % end
 % 
-% 
-% fig_summary = figure;
-% set(gcf, 'Position', [100 100 1085 750])
+% % Plotting
+% fig_summary_DFL = figure;
+% set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
 % clear sp
 % 
 % % 1. averaged amplitude for each condition
-% figure(fig_summary);
+% figure(fig_summary_DFL);
 % sp(1) = subplot('Position', [0.2 0.65 0.75 0.3]);
-% imagesc(matAmpCellCond(indCell,:)');
-% colormap(jet);
-% set(sp(1), 'CLim', [-1 1].*1.5)
-% if iSubj == 2
-%     set(sp(1), 'CLim', [-1 1].*1)
-% end
-% set(sp(1), 'XTick', find(diff(sortedIDX)>0), 'XTickLabel', [])
-% set(sp(1), 'YTick', 1:length(setCond), 'YTickLabel', setCondName)
+% imagesc(catAvgMatTS(:, indCelldfl)');
+% colormap(hot);
+% set(sp(1), 'CLim', [-1 1].*4)
+% set(sp(1), 'YTick', find(diff(sortedIDXdfl)>0), 'YTickLabel', [])
+% set(sp(1), 'XTick', 200:200:1200, 'XTickLabel', 20:20:120)
 % set(sp(1), 'TickDir', 'out')
 % box off
 % colorbar;
-% title(sprintf('%s %s: average response amplitude for each category', nameSubj, dateSession))
-% xlabel('Cells')
-% ylabel('Image category')
+% title(sprintf('%s %s: averaged response to movie %s', nameSubj, dateSession, tS_session(iMovie).idStim))
+% ylabel('Cells (sorted)')
+% xlabel('Time (s)')
 % 
 % % 2. Clustering results on 2-d PC space
-% figure(fig_summary);
+% figure(fig_summary_DFL);
 % sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
 % cMap_sort = hsv(k);
 % 
@@ -366,16 +340,16 @@ axis off
 %         plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
 %         hold on;
 % end
-% legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Location', 'best')
+% legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5', 'Location', 'best')
 % xlabel(sprintf('PC 1: explained %2.2f %% var', explained(1)))
 % ylabel(sprintf('PC 2: explained %2.2f %% var', explained(2)))
 % set(gca, 'TickDir', 'out')
 % box off
 % axis square
-% title('Clustering based on category selectivity on PC space')
+% title('Clustering based on movie response on PC space')
 % 
 % % 3. Clustering results on imaging field of view
-% figure(fig_summary);
+% figure(fig_summary_DFL);
 % sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
 % cMap_sort = hsv(k);
 % 
@@ -388,5 +362,60 @@ axis off
 %     end
 % end
 % axis off
+% 
+% % % for each run
+% % fig_map = figure;
+% % for iRun = 1:length(tSeries_DFL)
+% % matTSnorm = zscore(tSeries_DFL(iRun).C_raw');
+% % 
+% % k = 5;
+% % [IDX, C, SUMD] = kmeans(matTSnorm', k, 'Distance', 'correlation');
+% % [sortedIDX, indCell] = sort(IDX);
+% % 
+% % 
+% % clear indCell_sort
+% % for iType = 1:k
+% %     indCell_sort{iType} = indCell(sortedIDX==iType);
+% % end
+% % 
+% % cMap_sort = hsv(k);
+% % figure(fig_map);
+% % subplot(1,length(tSeries_DFL),iRun);
+% % imagesc(imgFOV); colormap(gray);
+% % axis off
+% % for iType = 1:k
+% %     for iC = 1:size(indCell_sort{iType}, 1)
+% %         figure(fig_map);
+% %         hold on;
+% %         plot(Coor{indCell_sort{iType}(iC, 1)}(1,:), Coor{indCell_sort{iType}(iC, 1)}(2,:), '.', 'Color', cMap_sort(iType, :));
+% %     end
+% % end
+% % title(sprintf('DFL Run #%d', iRun))
+% % 
+% % end
+% 
+% % end
+% 
+% % if flagSavePPTX
+% %     % save figures
+% %     addpath(fullfile(dirProjects, '/_toolbox/exportToPPTX/'));
+% %     addpath(fullfile(dirProjects, '/_toolbox/imagetools/'));
+% %     
+% %     fname_pptx = sprintf('%s_ClusteringBPMDFL', nameSubj); % fullfile('procdata/parksh/_marmoset/invivoCalciumImaging/', nameSubj, 'FOV1', sprintf('%s.pptx', dateSession));
+% %     exportFigsToPPTX(fname_pptx);
+% %     
+% % %     switch lower(nameSubj)
+% % %         case 'tabla'
+% % %             dest = '/procdata/parksh/_marmoset/invivoCalciumImaging/Tabla/FOV1';
+% % %         case 'max'
+% % %             dest = '/procdata/parksh/_marmoset/invivoCalciumImaging/Max/FOV3';
+% % %     end
+% %     movefile('./*.pptx', dirFig);
+% % end
+% 
+% % end
+% 
+% 
+% 
 
 
