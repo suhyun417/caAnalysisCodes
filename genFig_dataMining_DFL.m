@@ -32,7 +32,8 @@ nameSubj = setNameSubj{iSubj}; %'Tabla';
 setDateSession = c(2:end); % 1st one is always empty
 nSession = length(setDateSession);
 
-iSession = 1; % for iSession = 1:nSession
+for iSession = 1:nSession
+% iSession = 1; 
 dateSession = setDateSession{iSession}; %'20191113'; %setDateSession{iSession};
 
 dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
@@ -48,10 +49,56 @@ d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
 
 load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
 
+
+validIndCell = [];
+validIndCell(:,1) = 1:length(neuron.ids);
+if strcmpi(nameSubj, 'max')
+    load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
+    validIndCell = indCell.validCell;
+end
+
+
 % get the contours and image field of view
 % neuron_b = neuron.batches{1}.neuron;
-thr = 0.3; % the lower the smaller (more centralized) the contour
-Coor = neuron.get_contours(thr);
+
+% Generate cell location map within FOV
+thr = 0.5; % the lower the smaller (more centralized) the contour
+cellColor = [1 1 1];
+widthContour = 1;
+[d1,d2] = size(neuron.Cn);
+
+figure;
+imagesc(zeros(d1, d2)); % background
+colormap(gray);
+caxis([0 0.1]);
+hold on;
+
+CC = cell(size(neuron.A, 2),1);
+CR = cell(size(neuron.A, 2),2);
+for i = 1:size(neuron.A ,2)
+    A_temp = full(reshape(neuron.A(:,i),d1,d2));
+    A_temp = medfilt2(A_temp,[3,3]);
+    A_temp = A_temp(:);
+    [temp,ind] = sort(A_temp(:).^2,'ascend');
+    temp =  cumsum(temp);
+    ff = find(temp > (1-thr)*temp(end),1,'first');
+    if ~isempty(ff)
+        CC{i} = contourf(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor',cellColor, 'linewidth', widthContour);
+        fp = find(A_temp >= A_temp(ind(ff)));
+        [ii,jj] = ind2sub([d1,d2],fp);
+        CR{i,1} = [ii,jj]';
+        CR{i,2} = A_temp(fp)';
+    end
+    hold on;
+end
+axis off
+title(sprintf('%s: %s', nameSubj, dateSession))
+%save
+print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
+
+end
+%
+Coor = neuron.get_contours(thr); % Coor = get_contours(obj, thr, ind_show); % ind_show: indices of cells you want to get contours
 imgFOV = neuron.Cn.*neuron.PNR;
 
 % % draw all the contours
@@ -59,15 +106,20 @@ imgFOV = neuron.Cn.*neuron.PNR;
 
 figure
 [center] = neuron.estCenter();
+center = center(validIndCell, :);
 imagesc(imgFOV)
 hold on
 plot(center(:,2), center(:, 1), 'r.')
 text(center(:,2)+1, center(:,1), num2str([1:size(center,1)]'), 'Color', 'w');
+axis off
 
 
 %% Cell quality check using SNR and PNR
 snrs = var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2);
 pnrs = max(neuron.C, [], 2)./std(neuron.C_raw-neuron.C, 0, 2);
+
+snrs = snrs(validIndCell);
+pnrs = pnrs(validIndCell);
 
 [a, sortedID_snr] = sort(snrs, 'descend');
 [aa, sortedID_pnr] = sort(pnrs, 'descend');
@@ -82,7 +134,7 @@ title(sprintf('%s: %s', nameSubj, dateSession))
 line([median(snrs) median(snrs)], get(gca, 'ylim'), 'Color', 'r')
 
 % Location of a particular set cells
-setCells_rank = length(sortedID_pnr)-9:length(sortedID_pnr); %1:10
+setCells_rank = 1:10; %length(sortedID_pnr)-9:length(sortedID_pnr); %1:10
 figure;
 imagesc(imgFOV);
 colormap(gray);
@@ -101,8 +153,8 @@ nTime = 1000;
 for iCell =1:nCell
 figure(100);
 hold on;
-plot(neuron.C_raw(sortedID_snr(iCell), 1:nTime)+10*(iCell-1), '-')
-tY(iCell) = mean(neuron.C_raw(sortedID_snr(iCell), 1:nTime)+10*(iCell-1));
+plot(neuron.C_raw(validIndCell(sortedID_snr(iCell)), 1:nTime)+10*(iCell-1), '-')
+tY(iCell) = mean(neuron.C_raw(validIndCell(sortedID_snr(iCell)), 1:nTime)+10*(iCell-1));
 end
 title('SNR-based sorting')
 set(gca, 'YTick', tY, 'YTickLabel', 1:nCell, 'TickDir', 'out')
@@ -116,8 +168,8 @@ nTime = 1000;
 for iCell =1:nCell
 figure(200);
 hold on;
-plot(neuron.C_raw(sortedID_pnr(iCell), 1:nTime)+10*(iCell-1), '-')
-tY(iCell) = mean(neuron.C_raw(sortedID_pnr(iCell), 1:nTime)+10*(iCell-1));
+plot(neuron.C_raw(validIndCell(sortedID_pnr(iCell)), 1:nTime)+10*(iCell-1), '-')
+tY(iCell) = mean(neuron.C_raw(validIndCell(sortedID_pnr(iCell)), 1:nTime)+10*(iCell-1));
 end
 title('PNR-based sorting')
 set(gca, 'YTick', tY, 'YTickLabel', 1:nCell, 'TickDir', 'out')
@@ -149,11 +201,11 @@ hold(SP(:), 'on');
 for iCell = 1:length(setCell)
     idCell = setCell(iCell);
     figure(figMovie_snr);
-    plot(SP(1), squeeze(tS_session(1).matTS(:, sortedID_snr(idCell), :))+10*(iCell-1), '-'); 
-    tY(iCell) = mean(mean(squeeze(tS_session(1).matTS(:, sortedID_snr(idCell), :))+10*(iCell-1)));
+    plot(SP(1), squeeze(tS_session(1).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1), '-'); 
+    tY(iCell) = mean(mean(squeeze(tS_session(1).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1)));
     
-    plot(SP(2), squeeze(tS_session(2).matTS(:, sortedID_snr(idCell), :))+10*(iCell-1), '-'); 
-    ttY(iCell) = mean(mean(squeeze(tS_session(2).matTS(:, sortedID_snr(idCell), :))+10*(iCell-1)));
+    plot(SP(2), squeeze(tS_session(2).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1), '-'); 
+    ttY(iCell) = mean(mean(squeeze(tS_session(2).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1)));
 end
 set(SP, 'YTick', tY, 'YTickLabel', setCell, 'TickDir', 'out')
 set(SP, 'XTick', 200:200:1200,  'XTickLabel', [200:200:1200]./10);
@@ -164,7 +216,7 @@ title(SP(1), 'Movie 1')
 title(SP(2), 'Movie 2')
 
 %pnr
-setCell = length(sortedID_pnr)-9:length(sortedID_pnr);  %1:10; %11:20; %10; 
+setCell = 1:10; %length(sortedID_pnr)-9:length(sortedID_pnr);  %1:10; %11:20; %10; 
 tY = []; ttY = [];
 figMovie_pnr = figure;
 set(figMovie_pnr, 'Position', [675    31   660   930], 'name', sprintf('%s %s: PNR based sorting', nameSubj, dateSession))
@@ -176,11 +228,11 @@ scalefac = 10;
 for iCell = 1:length(setCell)
     idCell = setCell(iCell);
     figure(figMovie_pnr);
-    plot(SP(1), squeeze(tS_session(1).matTS(:, sortedID_pnr(idCell), :))+scalefac*(iCell-1), '-'); 
-    tY(iCell) = mean(mean(squeeze(tS_session(1).matTS(:, sortedID_pnr(idCell), :))+scalefac*(iCell-1)));
+    plot(SP(1), squeeze(tS_session(1).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1), '-'); 
+    tY(iCell) = mean(mean(squeeze(tS_session(1).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1)));
     
-    plot(SP(2), squeeze(tS_session(2).matTS(:, sortedID_pnr(idCell), :))+scalefac*(iCell-1), '-'); 
-    ttY(iCell) = mean(mean(squeeze(tS_session(2).matTS(:, sortedID_pnr(idCell), :))+scalefac*(iCell-1)));
+    plot(SP(2), squeeze(tS_session(2).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1), '-'); 
+    ttY(iCell) = mean(mean(squeeze(tS_session(2).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1)));
 end
 set(SP, 'YTick', tY, 'YTickLabel', setCell, 'TickDir', 'out')
 set(SP, 'XTick', 200:200:1200,  'XTickLabel', [200:200:1200]./10);

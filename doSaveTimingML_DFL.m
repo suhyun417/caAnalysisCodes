@@ -13,6 +13,7 @@ stim.nameMovie = char(regexp(name, '(set\w{3})', 'match'));
 % doesn't wait for the trigger from camera
 % MOVIE_ON = 40;
 % REWARD = 90;
+% TRIG onset = 900; TRIG offset = 990; (TTL from ML to Inscopix DAQ On & Off)
 
 t.trialStart = data.AbsoluteTrialStartTime;
 t.sendTTL_start = data.BehavioralCodes.CodeTimes(data.BehavioralCodes.CodeNumbers==900);
