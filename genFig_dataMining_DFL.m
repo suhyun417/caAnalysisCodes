@@ -12,7 +12,7 @@ if ~isempty(strfind(ss, 'Volume')) % if it's local
     dirProcdata = '/Volumes/PROCDATA/parksh';
     dirRawdata = '/Volumes/rawdata/parksh';
 else % on virtual machine
-    dirProjects = '/projects/parksh';
+    dirProjects = '/nifvault/NIFVAULT/projects/parksh';
     dirProcdata = '/procdata/parksh';
     dirRawdata = '/rawdata/parksh';
 end
@@ -178,6 +178,15 @@ xlabel('Time (s)')
 ylabel('Cell order')
 
 
+tY=[];
+nCell = 10;
+nTime = 1000;
+for iCell =1:nCell
+figure(200);
+hold on;
+plot(neuron.C_raw(validIndCell(sortedID_pnr(iCell)), 1:nTime)+3*(iCell-1), '-', 'LineWidth', 2)
+end
+set(gca, 'XTick', 200:200:nTime,  'XTickLabel', [200:200:nTime]./10);
 
 
 

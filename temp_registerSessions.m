@@ -13,21 +13,21 @@ if ~isempty(strfind(ss, 'Volume')) % if it's local
     dirProcdata = '/Volumes/PROCDATA/parksh';
     dirRawdata = '/Volumes/rawdata/parksh';
 else % on virtual machine
-    dirProjects = '/projects/parksh';
+    dirProjects = '/nifvault/NIFVAULT/projects/parksh';
     dirProcdata = '/procdata/parksh';
     dirRawdata = '/rawdata/parksh';
 end
 
-addpath('/projects/parksh/_toolbox/TIFFstack');
-addpath('/projects/parksh/_toolbox/NoRMCorre/');
-addpath('/projects/parksh/_toolbox/Fast_Tiff_Write/');
-addpath('/projects/parksh/_toolbox/imagetools/');
+addpath('/nifvault/NIFVAULT/projects/parksh/_toolbox/TIFFstack');
+addpath('/nifvault/NIFVAULT/projects/parksh/_toolbox/NoRMCorre/');
+addpath('/nifvault/NIFVAULT/projects/parksh/_toolbox/Fast_Tiff_Write/');
+addpath('/nifvault/NIFVAULT/projects/parksh/_toolbox/imagetools/');
 % gcp; % for parallel processingls
 
 %% Session info & optional parameters
 setSubj ={'Tabla', 'Max'};
 
-dirFig = '/projects/parksh/0Marmoset/Ca/_labNote/_figs/';
+dirFig = '/nifvault/NIFVAULT/projects/parksh/0Marmoset/Ca/_labNote/_figs/';
 
 iSubj = 1; %1:length(setSubj)
 nameSubj = setSubj{iSubj};
