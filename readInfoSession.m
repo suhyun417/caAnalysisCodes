@@ -13,7 +13,7 @@ function [infoT, opts] = readInfoSession(nameSubj)
 
 ss = pwd;
 if ~isempty(strfind(ss, 'Volume')) % if it's local
-    dirProjects = '/Volumes/PROJECTS/parksh';
+    dirProjects = '/Volumes/NIFVAULT/projects/parksh';
     dirProcdata = '/Volumes/PROCDATA/parksh';
     dirRawdata = '/Volumes/rawdata/parksh';
 else % on virtual machine

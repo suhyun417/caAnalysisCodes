@@ -9,7 +9,7 @@ clear all;
 
 ss = pwd;
 if ~isempty(strfind(ss, 'Volume')) % if it's local
-    dirProjects = '/Volumes/PROJECTS/parksh';
+    dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
     dirProcdata = '/Volumes/PROCDATA/parksh';
     dirRawdata = '/Volumes/rawdata/parksh';
 else % on virtual machine
@@ -18,16 +18,16 @@ else % on virtual machine
     dirRawdata = '/rawdata/parksh';
 end
 
-addpath('/nifvault/NIFVAULT/projects/parksh/_toolbox/TIFFstack');
-addpath('/nifvault/NIFVAULT/projects/parksh/_toolbox/NoRMCorre/');
-addpath('/nifvault/NIFVAULT/projects/parksh/_toolbox/Fast_Tiff_Write/');
-addpath('/nifvault/NIFVAULT/projects/parksh/_toolbox/imagetools/');
+addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
+addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
+addpath(fullfile(dirProjects, '_toolbox/Fast_Tiff_Write/'));
+addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 % gcp; % for parallel processingls
 
 %% Session info & optional parameters
 setSubj ={'Tabla', 'Max'};
 
-dirFig = '/nifvault/NIFVAULT/projects/parksh/0Marmoset/Ca/_labNote/_figs/';
+dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
 iSubj = 1; %1:length(setSubj)
 nameSubj = setSubj{iSubj};
@@ -40,15 +40,15 @@ setDateSession = c(2:end); % 1st one is always empty
 nSession = length(setDateSession);
 
 % Load the reference image (first session)
-dirRefImage = sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/_preproc',...
-    nameSubj, setDateSession{1});
+dirRefImage = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/_preproc',...
+    nameSubj, setDateSession{1}));
 imgRef = loadtiff(fullfile(dirRefImage, 'mc_template.tif'));
 
 for iSession = 2:nSession
     % Load session image to align to the reference image
     dateSession = setDateSession{iSession};
-    dirSessionImage = sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/_preproc',...
-    nameSubj, dateSession);
+    dirSessionImage = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/_preproc',...
+    nameSubj, dateSession));
     imgSession = loadtiff(fullfile(dirSessionImage, 'mc_template.tif'));
  
 %     paramHPF.gSig = 7;
@@ -103,18 +103,23 @@ title('Rigid Motion Regiration')
         cnmfe_setup;
         
         % REF IMAGE
-        d_sources2D_ref = dir(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/Sources2D_all*',...
-            nameSubj, setDateSession{1}));
-        load(fullfile(d_sources2D_ref(1).folder, d_sources2D_ref(1).name));        
+%         d_sources2D_ref = dir(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/Sources2D_all*',...
+%             nameSubj, setDateSession{1})));
+%         load(fullfile(d_sources2D_ref(1).folder, d_sources2D_ref(1).name));  
+        tName = ls(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/Sources2D_all*',...
+            nameSubj, setDateSession{1}))); % because "dir" doesn't work 
+        load(strtrim(tName));
         imgFOV_ref = neuron.Cn.*neuron.PNR;
         [center_ref] = neuron.estCenter();
                 
         % SESSION IMAGE
-        dirProcdata_session = sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/',...
-            nameSubj, dateSession);
-        d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
         clear neuron
-        load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
+        dirProcdata_session = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/',...
+            nameSubj, dateSession));
+%         d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));        
+%         load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
+        tName_ses = ls(fullfile(dirProcdata_session, 'Sources2D_all*'));
+        load(strtrim(tName_ses))
         imgFOV_ses = neuron.Cn.*neuron.PNR;
         imgFOV_ses_reg = apply_shifts(imgFOV_ses, shifts1,options_r,bound/2,bound/2);
         
