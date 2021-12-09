@@ -7,15 +7,24 @@
 
 clear all;
 
-ss = pwd;
-if ~isempty(strfind(ss, 'Volume')) % if it's local
-    dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
-    dirProcdata = '/Volumes/PROCDATA/parksh';
-    dirRawdata = '/Volumes/rawdata/parksh';
-else % on virtual machine
-    dirProjects = '/nifvault/NIFVAULT/projects/parksh';
-    dirProcdata = '/procdata/parksh';
-    dirRawdata = '/rawdata/parksh';
+
+%% settings
+flagBiowulf = 1; %0;
+
+if flagBiowulf
+    directory.dataHome = '/data/parks20/procdata/NeuroMRI/';
+    dirFig = '/data/parks20/analysis/_figs';
+else
+    ss = pwd;
+    if ~isempty(strfind(ss, 'Volume')) % if it's local
+        dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
+        dirProcdata = '/Volumes/PROCDATA/parksh';
+        dirRawdata = '/Volumes/rawdata/parksh';
+    else % on virtual machine
+        dirProjects = '/nifvault/NIFVAULT/projects/parksh';
+        dirProcdata = '/procdata/parksh';
+        dirRawdata = '/rawdata/parksh';
+    end
 end
 
 addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
