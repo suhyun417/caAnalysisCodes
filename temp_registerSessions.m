@@ -9,7 +9,7 @@ clear all;
 
 
 %% settings
-flagBiowulf = 1; %0;
+flagBiowulf = 0; %1; %0;
 
 if flagBiowulf
     directory.dataHome = '/data/parks20/procdata/NeuroMRI/';
@@ -18,7 +18,7 @@ else
     ss = pwd;
     if ~isempty(strfind(ss, 'Volume')) % if it's local
         dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
-        dirProcdata = '/Volumes/PROCDATA/parksh';
+        dirProcdata = '/Volumes/NIFVAULT/PROCDATA/parksh';
         dirRawdata = '/Volumes/rawdata/parksh';
     else % on virtual machine
         dirProjects = '/nifvault/NIFVAULT/projects/parksh';
@@ -81,88 +81,145 @@ for iSession = 2:nSession
     tic; [M1,shifts1,template1] = normcorre(imgSession(bound/2+1:end-bound/2,bound/2+1:end-bound/2),options_r, imgRef); toc % register filtered data
     %      [M_final,shifts,template,options,col_shift] = normcorre(Y,options,template);
     % apply shifts and save it as desired format described in the options
-    tic; Mrg = apply_shifts(imgSession,shifts1,options_r,bound/2,bound/2); toc    
+%     tic; Mrg = apply_shifts(imgSession,shifts1,options_r,bound/2,bound/2); toc    
 
-%     %% now apply non-rigid motion correction
-%     % non-rigid motion correction is likely to produce very similar results
-%     % since there is no raster scanning effect in wide field imaging    
-%     options_nr = NoRMCorreSetParms('d1',d1-bound,'d2',d2-bound,'bin_width',50, ...
-%         'grid_size',[30,30]*2,'mot_uf',4,'correct_bidir',false, ...
-%         'overlap_pre',32,'overlap_post',32,'max_shift',20, ...
-%         'output_type', 'mat'); % 'tif', 'tiff_filename', './registrationTest_nrgm.tif');
-%     
-%     tic; [M2,shifts2,template2] = normcorre(imgSession(bound/2+1:end-bound/2,bound/2+1:end-bound/2),options_nr,imgRef); toc % register filtered data
-% % apply shifts and save it as desired format described in the options
-%     tic; Mnrg = apply_shifts(imgSession,shifts2,options_nr,bound/2,bound/2); toc    
+% % Check the registration
+% figure;
+% subplot(1, 2, 1);
+% imshowpair(imgRef, imgSession);
+% title('Before Registration')
+% subplot(1, 2, 2);
+% imshowpair(imgRef, Mrg);
+% title('Rigid Motion Regiration')
+% % subplot(1, 3, 3);
+% % imshowpair(imgRef, Mnrg);
+% % title('Non-rigid motion Registration')
 
-% Check the registration
-figure;
-subplot(1, 2, 1);
-imshowpair(imgRef, imgSession);
-title('Before Registration')
-subplot(1, 2, 2);
-imshowpair(imgRef, Mrg);
-title('Rigid Motion Regiration')
-% subplot(1, 3, 3);
-% imshowpair(imgRef, Mnrg);
-% title('Non-rigid motion Registration')
-
-        %% is it possible to apply shifts directly to neuron.A?
+        %% Apply shifts directly to neuron.A: yes you can just add the shifts
         addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
         cnmfe_setup;
         
-        % REF IMAGE
+%         % REF IMAGE
 %         d_sources2D_ref = dir(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/Sources2D_all*',...
 %             nameSubj, setDateSession{1})));
 %         load(fullfile(d_sources2D_ref(1).folder, d_sources2D_ref(1).name));  
-        tName = ls(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/Sources2D_all*',...
-            nameSubj, setDateSession{1}))); % because "dir" doesn't work 
-        load(strtrim(tName));
-        imgFOV_ref = neuron.Cn.*neuron.PNR;
-        [center_ref] = neuron.estCenter();
+% %         tName = ls(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/Sources2D_all*',...
+% %             nameSubj, setDateSession{1}))); % because "dir" doesn't work 
+% %         load(strtrim(tName));
+%         imgFOV_ref = neuron.Cn.*neuron.PNR;
+%         [center_ref] = neuron.estCenter();
                 
         % SESSION IMAGE
         clear neuron
         dirProcdata_session = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/',...
             nameSubj, dateSession));
-%         d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));        
-%         load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
-        tName_ses = ls(fullfile(dirProcdata_session, 'Sources2D_all*'));
-        load(strtrim(tName_ses))
+        d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));        
+        load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
+%         tName_ses = ls(fullfile(dirProcdata_session, 'Sources2D_all*'));
+%         load(strtrim(tName_ses))
         imgFOV_ses = neuron.Cn.*neuron.PNR;
         imgFOV_ses_reg = apply_shifts(imgFOV_ses, shifts1,options_r,bound/2,bound/2);
         
-        figure
-        subplot(1,2,1);
-        imshowpair(imgFOV_ref, imgFOV_ses)
-        title('Before Registration')
-        subplot(1,2,2);
-        imshowpair(imgFOV_ref, imgFOV_ses_reg)
-        title('After Registration')
+%         figure
+%         subplot(1,2,1);
+%         imshowpair(imgFOV_ref, imgFOV_ses)
+%         title('Before Registration')
+%         subplot(1,2,2);
+%         imshowpair(imgFOV_ref, imgFOV_ses_reg)
+%         title('After Registration')
 
         [center_ses] = neuron.estCenter();
         shifts = squeeze(shifts1.shifts);
         center_ses_reg = center_ses + shifts';
         
 
-        figure
-        sp(1) = subplot(1,2,1);
-        plot(center_ref(:,2), center_ref(:, 1), 'r.')
-        hold on
-        plot(center_ses(:,2), center_ses(:, 1), 'b.')
-        sp(2) = subplot(1,2,2);
-        plot(center_ref(:,2), center_ref(:, 1), 'r.')
-        hold on
-        plot(center_ses_reg(:,2), center_ses_reg(:, 1), 'g.')
-        set(sp, 'YDir', 'reverse')
-        [d1,d2] = size(neuron.Cn);
-        set(sp, 'XLim', [0 d2], 'YLim', [0 d1])
-        title(sp(1), 'Cell center: before registration')
-        title(sp(2), 'Cell center: after registration')
+%         figure
+%         sp(1) = subplot(1,2,1);
+%         plot(center_ref(:,2), center_ref(:, 1), 'r.')
+%         hold on
+%         plot(center_ses(:,2), center_ses(:, 1), 'b.')
+%         sp(2) = subplot(1,2,2);
+%         plot(center_ref(:,2), center_ref(:, 1), 'r.')
+%         hold on
+%         plot(center_ses_reg(:,2), center_ses_reg(:, 1), 'g.')
+%         set(sp, 'YDir', 'reverse')
+%         [d1,d2] = size(neuron.Cn);
+%         set(sp, 'XLim', [0 d2], 'YLim', [0 d1])
+%         title(sp(1), 'Cell center: before registration')
+%         title(sp(2), 'Cell center: after registration')
+
+end
+
+%% Possible code
+% 1. Function performing longitudinal registration
+% - Load reference image
+% - For each following sessions
+%   - load session image
+%   - perform the rigid-body registration
+%   - save the shifts (and registration parameters and other outcomes)
+%       - for each animal and each FOV (e.g. Tabla_FOV1_shifts.mat)
+% 2. Another script to extract cells across daily sessions using the shifts
+% - Maybe it's better to pool in the pixel space. imagine a grid in n x n pixel
+% resolution (e.g. 3 pixels? I can choose the criterion) and make a list of
+% grid in columnar way. Then gather cell IDs from the REF and SES 
+% 3. Some kind of cell sorting/exclusion need to be done to exclude
+% non-valid sources (e.g. not circular, too low SNR/PNR). 
+%   Example (from Sources2D.m):
+%       nA = sqrt(sum(obj.A.^2));
+%       nr = length(nA);
+%       K = size(obj.C, 1);
+%       % order neurons based on its circularity
+%       tmp_circularity = zeros(K,1);
+%       for m=1:K
+%           [w, r] = nnmf(obj.reshape(obj.A(:, m),2), 1);
+%           ky = sum(w>max(w)*0.3);
+%           kx = sum(r>max(r)*0.3);
+%           tmp_circularity(m) = abs((kx-ky+0.5)/((kx+ky)^2));
+%       end
+%       [~, srt] = sort(tmp_circularity, 'ascend');
+% 0. The cell exclusion can be done first before pooling cells across days.
+% 0. So from now on we will always load the valid cell index computed from
+% the above code #3 and apply that to the time series etc. Dealing with
+% indices will be tricky and requires extra attention.
+
+% ## Other things
+% %% trim spatial components
+%         function [ind_small] = trimSpatial(obj, thr, sz)
+%             % remove small nonzero pixels
+%             if nargin<2;    thr = 0.01; end
+%             if nargin<3;    sz = 5; end
+%             
+%             se = strel('square', sz);
+%             ind_small = false(size(obj.A, 2), 1);
+%             for m=1:size(obj.A,2)
+%                 ai = obj.A(:,m);
+%                 ai_open = imopen(obj.reshape(ai,2), se);
+%                 
+%                 temp = full(ai_open>max(ai)*thr);
+%                 l = bwlabel(obj.reshape(temp,2), 4);   % remove disconnected components
+%                 [~, ind_max] = max(ai_open(:));
+%                 
+%                 ai(l(:)~=l(ind_max)) = 0;
+%                 if sum(ai(:)>0) < obj.options.min_pixel %the ROI is too small
+%                     ind_small(m) = true;
+%                 end
+%                 obj.A(:, m) = ai(:);
+%             end
+%             %             ind_small = find(ind_small);
+%             %             obj.delete(ind_small);
+%         end
+% %% keep spatial shapes compact
+%         function compactSpatial(obj)
+%             for m=1:size(obj.A, 2)
+%                 ai = obj.reshape(obj.A(:, m), 2);
+%                 ai = circular_constraints(ai);
+%                 obj.A(:, m) = ai(:);
+%             end
+%         end
 
 
-
-    thr = 0.5; % the lower the smaller (more centralized) the contour
+%% Contour visualization
+thr = 0.5; % the lower the smaller (more centralized) the contour
 cellColor = [1 1 1];
 widthContour = 1;
 [d1,d2] = size(neuron.Cn);
