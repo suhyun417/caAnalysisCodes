@@ -21,9 +21,9 @@ else
         dirProcdata = '/Volumes/NIFVAULT/PROCDATA/parksh';
         dirRawdata = '/Volumes/rawdata/parksh';
     else % on virtual machine
-        dirProjects = '/nifvault/NIFVAULT/projects/parksh';
-        dirProcdata = '/procdata/parksh';
-        dirRawdata = '/rawdata/parksh';
+        dirProjects = '/nifvault/projects/parksh';
+        dirProcdata = '/nifvault/procdata/parksh';
+        dirRawdata = '/nifvault/rawdata/parksh';
     end
 end
 
