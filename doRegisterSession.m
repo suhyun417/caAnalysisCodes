@@ -145,9 +145,9 @@ end
 % %         imshowpair(imgFOV_ref, imgFOV_ses_reg)
 % %         title('After Registration')
 
-        [center_ses] = neuron.estCenter();
-        shifts = squeeze(shifts1.shifts);
-        center_ses_reg = center_ses + shifts';
+%         [center_ses] = neuron.estCenter();
+%         shifts = squeeze(shifts1.shifts);
+%         center_ses_reg = center_ses + shifts';
         
 
 %         figure
