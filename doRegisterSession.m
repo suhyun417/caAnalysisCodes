@@ -9,8 +9,8 @@ function [shifts] = doRegisterSession(nameSubj, FOV_ID, flagSaveFile)
 %   - save the shifts (and registration parameters and other outcomes)
 %       - for each animal and each FOV (e.g. Tabla_FOV1_shifts.mat)
 % - INPUT
-%   - nameSubj:
-%   - FOV_ID:
+%   - nameSubj: full name of subject (string)
+%   - FOV_ID: ID of FOV, in number (double)
 %   - flagSaveFile: if 1, it will save the shifts in a .mat file
 % - OUTPUT
 %   - shifts: N by 2 array contains x, y shifts that need to be applied to
@@ -96,8 +96,9 @@ for iSession = 2:nSession
 end
 
 if flagSaveFile
-    fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_shifts.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-    save(fname_shifts, 'shifts', 'paramRegister')
+    fname_shifts = fullfile(dirProjects, sprintf('0Marmoset/Ca/tempData/%s_FOV%d_shifts.mat', nameSubj, FOV_ID));
+%     fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_shifts.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+    save(fname_shifts, 'shifts', 'diff', 'paramRegister')
 end
 
 % % Check the registration
