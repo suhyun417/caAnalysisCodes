@@ -3,30 +3,28 @@
 % Digging DFL data to find out something
 % started from "genFig_functionalMapFOV.m"
 % 2021/09/08 SHP
+% 2021/12/21 SHP: working on the part that selects good cells
 
 clear all;
 
 ss = pwd;
 if ~isempty(strfind(ss, 'Volume')) % if it's local
-    dirProjects = '/Volumes/PROJECTS/parksh';
-    dirProcdata = '/Volumes/PROCDATA/parksh';
-    dirRawdata = '/Volumes/rawdata/parksh';
+    dirProjects = '/Volumes/NIFVAULT/projects/parksh';
+    dirProcdata = '/Volumes/NIFVAULT/procdata/parksh';
+    dirRawdata = '/Volumes/NIFVAULT/rawdata/parksh';
 else % on virtual machine
-    dirProjects = '/nifvault/NIFVAULT/projects/parksh';
-    dirProcdata = '/procdata/parksh';
-    dirRawdata = '/rawdata/parksh';
+    dirProjects = '/nifvault/projects/parksh';
+    dirProcdata = '/nifvault/procdata/parksh';
+    dirRawdata = '/nifvault/rawdata/parksh';
 end
 
-setNameSubj = {'Tabla', 'Max'};
+% setNameSubj = {'Tabla', 'Max'};
 flagSavePPTX = 0; %1;
 
-
-iSubj = 1; % for iSubj = 1:2
-
-nameSubj = setNameSubj{iSubj}; %'Tabla';
-
 % get session info
-[infoSession, opts] = readInfoSession(nameSubj);
+nameSubj = 'Tabla';
+FOV_ID = 1;
+[infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
 
 [c, ia, indRun] = unique(infoSession.(1), 'sorted');
 setDateSession = c(2:end); % 1st one is always empty
@@ -48,7 +46,6 @@ cnmfe_setup;
 d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
 
 load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
-
 
 validIndCell = [];
 validIndCell(:,1) = 1:length(neuron.ids);
@@ -93,10 +90,10 @@ for i = 1:size(neuron.A ,2)
 end
 axis off
 title(sprintf('%s: %s', nameSubj, dateSession))
-%save
-print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
+% %save
+% print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
 
-end
+% end
 %
 Coor = neuron.get_contours(thr); % Coor = get_contours(obj, thr, ind_show); % ind_show: indices of cells you want to get contours
 imgFOV = neuron.Cn.*neuron.PNR;
