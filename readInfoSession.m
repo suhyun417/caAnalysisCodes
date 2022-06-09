@@ -19,9 +19,9 @@ if ~isempty(strfind(ss, 'Volume')) % if it's local
     dirProcdata = '/Volumes/NIFVAULT/procdata/parksh';
     dirRawdata = '/Volumes/NIFVAULT/rawdata/parksh';
 else % on virtual machine
-    dirProjects = '/NIFVAULT/projects/parksh';
-    dirProcdata = '/NIFVAULT/procdata/parksh';
-    dirRawdata = '/NIFVAULT/rawdata/parksh';
+    dirProjects = '/nifvault/projects/parksh';
+    dirProcdata = '/nifvault/procdata/parksh';
+    dirRawdata = '/nifvault/rawdata/parksh';
 end
 
 % get session info from spreadsheet

@@ -188,7 +188,7 @@ set(gca, 'XTick', 200:200:nTime,  'XTickLabel', [200:200:nTime]./10);
 
 
 %% Movie-driven signal
-load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', nameSubj, dateSession))
+load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', nameSubj, dateSession))
 
 % snrs = var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2);
 % pnrs = max(neuron.C, [], 2)./std(neuron.C_raw-neuron.C, 0, 2);
