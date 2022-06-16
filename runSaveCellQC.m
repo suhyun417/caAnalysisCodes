@@ -20,8 +20,8 @@ flagSaveFile = 1;
 
 
 %% Get session info
-nameSubj = 'Tabla';
-FOV_ID = 1;
+nameSubj = 'Tabla'; %'Max'; %'Tabla';
+FOV_ID = 1; %3; %1;
 [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
 
 [c, ia, indRun] = unique(infoSession.(1), 'sorted');
@@ -66,60 +66,7 @@ for iSession = 1:length(setDateSession)
     [a, sortedID_snr] = sort(snrs, 'descend');
     [aa, sortedID_pnr] = sort(pnrs, 'descend');
     
-%     indCell_highSNR = find(snrs>mean(snrs)); 
-%     
-%     for i = 1:124
-%         figure(100);
-%         subplot(2,1,1); cla;
-%         plot(neuron.C_raw(sortedID_snr(i), 1000:2000))
-%         hold on
-%         plot(neuron.C(sortedID_snr(i), 1000:2000), 'r-')
-%         axis tight
-%         title(sprintf('Session %s: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_snr(i), a(i)))
-%         subplot(2,1,2)
-%         plot(neuron.S(sortedID_snr(i), 1000:2000))
-%         axis tight
-%         input('')
-%     end
-%      
 
-load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
-load(fullfile(dirProcdata_session, 'DFL_ts.mat'))
-load(fullfile(dirProcdata_session, 'RS_ts.mat'))
-    for i = 1:124
-        figure(200);
-        subplot(3,1,1); cla;
-        plot(tSeries_BPM(1).C_raw(sortedID_pnr(i), 1:1200))
-        hold on
-        plot(tSeries_BPM(1).C(sortedID_pnr(i), 1:1200), 'c-')
-        plot(tSeries_BPM(2).C_raw(sortedID_pnr(i), 1:1200), 'r-')
-        plot(tSeries_BPM(2).C(sortedID_pnr(i), 1:1200), 'm-')
-        axis tight
-        title(sprintf('%s BPM: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_pnr(i), a(i)))
-        
-        subplot(3,1,2); cla;
-        plot(tSeries_DFL(4).C_raw(sortedID_pnr(i), :))
-        hold on
-        plot(tSeries_DFL(4).C(sortedID_pnr(i), :), 'c-')
-        plot(tSeries_DFL(5).C_raw(sortedID_pnr(i), :), 'r-')
-        hold on
-        plot(tSeries_DFL(5).C(sortedID_pnr(i), :), 'm-')
-        axis tight
-        title(sprintf('%s DFL: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_pnr(i), a(i)))
-        
-        subplot(3,1,3); cla;
-        plot(tSeries_RS.C_raw(sortedID_pnr(i), 1001:2200))
-        hold on
-        plot(tSeries_RS.C(sortedID_pnr(i), 1001:2200), 'c-')
-        plot(tSeries_RS.C_raw(sortedID_pnr(i), 3001:4200), 'r-')
-        hold on
-        plot(tSeries_RS.C(sortedID_pnr(i), 3001:4200), 'm-')
-        axis tight
-        title(sprintf('%s RS: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_pnr(i), a(i)))
-        
-        input('')
-    end
-    
     % % draw all the contours
     % neuron_b.show_contours([], [], imgFOV, 'true');
     
@@ -154,11 +101,116 @@ end
 %% Save the data
 %% in main procdata FOV folder
 if flagSaveFile
-    fname_cellQC = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_stackedCenter.mat',...
+    fname_cellQC = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellQC.mat',...
         nameSubj, FOV_ID, nameSubj, FOV_ID));
     save(fname_cellQC, 'infoCells')
 end
+
+
+
+%% playing
+for i = 1:length(infoCells)
+    indlow10 = [];
+    indlow10 = find(infoCells(i).pnrs<10);
     
+    [sortpnrs, indsort] = sort(infoCells(i).pnrs, 'descend');
+    indtop10 = indsort(1:10);
+    
+    figure(100)
+    plot(infoCells(i).cellCenter(indtop10,2), infoCells(i).cellCenter(indtop10, 1), '.', 'MarkerSize', 15);
+    set(gca, 'YDir', 'reverse')
+    hold on;
+    input('')
+end
+
+%% plot movie tseries of potential same cell
+cellID = [22 16 14 17 19]; % from Tabla FOV1
+nameSubj = 'Tabla'; %'Max'; %'Tabla';
+FOV_ID = 1; %3; %1;
+[infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
+
+[c, ia, indRun] = unique(infoSession.(1), 'sorted');
+setDateSession = c(2:end); % 1st one is always empty
+nSession = length(setDateSession);
+for iS = 1:5
+    
+    dateSession = setDateSession{iSession}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+    % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
+    
+    dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+    
+    load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
+    
+    figure(200);
+    subplot(2,1,1)
+    title('Mov 1')
+    plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
+    hold on
+    
+    subplot(2,1,2)
+    title('Mov 2')
+    plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
+    hold on
+end
+    
+
+%     indCell_highSNR = find(snrs>mean(snrs)); 
+%     
+%     for i = 1:124
+%         figure(100);
+%         subplot(2,1,1); cla;
+%         plot(neuron.C_raw(sortedID_snr(i), 1000:2000))
+%         hold on
+%         plot(neuron.C(sortedID_snr(i), 1000:2000), 'r-')
+%         axis tight
+%         title(sprintf('Session %s: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_snr(i), a(i)))
+%         subplot(2,1,2)
+%         plot(neuron.S(sortedID_snr(i), 1000:2000))
+%         axis tight
+%         input('')
+%     end
+%      
+% 
+% load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
+% load(fullfile(dirProcdata_session, 'DFL_ts.mat'))
+% load(fullfile(dirProcdata_session, 'RS_ts.mat'))
+%     for i = 1:124
+%         figure(200);
+%         subplot(3,1,1); cla;
+%         plot(tSeries_BPM(1).C_raw(sortedID_pnr(i), 1:1200))
+%         hold on
+%         plot(tSeries_BPM(1).C(sortedID_pnr(i), 1:1200), 'c-')
+%         plot(tSeries_BPM(2).C_raw(sortedID_pnr(i), 1:1200), 'r-')
+%         plot(tSeries_BPM(2).C(sortedID_pnr(i), 1:1200), 'm-')
+%         axis tight
+%         title(sprintf('%s BPM: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_pnr(i), a(i)))
+%         
+%         subplot(3,1,2); cla;
+%         plot(tSeries_DFL(4).C_raw(sortedID_pnr(i), :))
+%         hold on
+%         plot(tSeries_DFL(4).C(sortedID_pnr(i), :), 'c-')
+%         plot(tSeries_DFL(5).C_raw(sortedID_pnr(i), :), 'r-')
+%         hold on
+%         plot(tSeries_DFL(5).C(sortedID_pnr(i), :), 'm-')
+%         axis tight
+%         title(sprintf('%s DFL: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_pnr(i), a(i)))
+%         
+%         subplot(3,1,3); cla;
+%         plot(tSeries_RS.C_raw(sortedID_pnr(i), 1001:2200))
+%         hold on
+%         plot(tSeries_RS.C(sortedID_pnr(i), 1001:2200), 'c-')
+%         plot(tSeries_RS.C_raw(sortedID_pnr(i), 3001:4200), 'r-')
+%         hold on
+%         plot(tSeries_RS.C(sortedID_pnr(i), 3001:4200), 'm-')
+%         axis tight
+%         title(sprintf('%s RS: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_pnr(i), a(i)))
+%         
+%         input('')
+%     end
+    
+
+
+
     % get the contours and image field of view
     % neuron_b = neuron.batches{1}.neuron;
     

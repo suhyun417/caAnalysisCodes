@@ -86,8 +86,8 @@ end
 % cat(2, squeeze(stackCellCenter(10, 105, :)), squeeze(stackCellCenter(10, 103, :)), squeeze(stackCellCenter(11, 104, :)), squeeze(stackCellCenter(9, 106, :)), squeeze(stackCellCenter(13, 104, :)))
 
 if flagSaveFile
-    fname_stack = fullfile(dirProjects, sprintf('0Marmoset/Ca/tempData/%s_FOV%d_stackedCenter.mat', nameSubj, FOV_ID));
-%     fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_stackedCenter.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+%     fname_stack = fullfile(dirProjects, sprintf('0Marmoset/Ca/tempData/%s_FOV%d_stackedCenter.mat', nameSubj, FOV_ID));
+    fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_stackedCenter.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
     save(fname_stack, 'stackCellCenter')
 end
 
