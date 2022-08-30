@@ -108,50 +108,59 @@ end
 
 
 
-%% playing
-for i = 1:length(infoCells)
-    indlow10 = [];
-    indlow10 = find(infoCells(i).pnrs<10);
-    
-    [sortpnrs, indsort] = sort(infoCells(i).pnrs, 'descend');
-    indtop10 = indsort(1:10);
-    
-    figure(100)
-    plot(infoCells(i).cellCenter(indtop10,2), infoCells(i).cellCenter(indtop10, 1), '.', 'MarkerSize', 15);
-    set(gca, 'YDir', 'reverse')
-    hold on;
-    input('')
-end
+% %% playing
+% for i = 1:length(infoCells)
+%     indlow10 = [];
+%     indlow10 = find(infoCells(i).pnrs<10);
+%     
+%     [sortpnrs, indsort] = sort(infoCells(i).pnrs, 'descend');
+%     indtop10 = indsort(1:10);
+%     
+%     figure(100)
+%     plot(infoCells(i).cellCenter(indtop10,2), infoCells(i).cellCenter(indtop10, 1), '.', 'MarkerSize', 15);
+%     set(gca, 'YDir', 'reverse')
+%     hold on;
+%     input('')
+% end
 
-%% plot movie tseries of potential same cell
-cellID = [22 16 14 17 19]; % from Tabla FOV1
-nameSubj = 'Tabla'; %'Max'; %'Tabla';
-FOV_ID = 1; %3; %1;
-[infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
-
-[c, ia, indRun] = unique(infoSession.(1), 'sorted');
-setDateSession = c(2:end); % 1st one is always empty
-nSession = length(setDateSession);
-for iS = 1:5
-    
-    dateSession = setDateSession{iSession}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
-    % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
-    
-    dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-    
-    load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
-    
-    figure(200);
-    subplot(2,1,1)
-    title('Mov 1')
-    plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
-    hold on
-    
-    subplot(2,1,2)
-    title('Mov 2')
-    plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
-    hold on
-end
+% %% plot movie tseries of potential same cell
+% cellID = [22 16 14 17 19 18 nan nan nan 5 9 24]; % from Tabla FOV1
+% nameSubj = 'Tabla'; %'Max'; %'Tabla';
+% FOV_ID = 1; %3; %1;
+% [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
+% 
+% [c, ia, indRun] = unique(infoSession.(1), 'sorted');
+% setDateSession = c(2:end); % 1st one is always empty
+% nSession = length(setDateSession);
+% tempMatTS1 = []; tempMatTS2 = [];
+% for iS = 1:length(cellID)
+%     
+%     if isnan(cellID(iS))
+%         continue;
+%     end
+%         
+%     dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+%     % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
+%     
+%     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+%     
+%     load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
+%     
+%     figure(200);
+%     subplot(2,1,1)
+%     title('Mov 1')
+%     plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
+%     hold on
+%     
+%     tempMatTS1 = cat(1, tempMatTS1, squeeze(tS_session(1).matTS_norm(:, cellID(iS), :))');
+%     
+%     subplot(2,1,2)
+%     title('Mov 2')
+%     plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
+%     hold on
+%     
+%     tempMatTS2 = cat(1, tempMatTS2, squeeze(tS_session(2).matTS_norm(:, cellID(iS), :))');
+% end
     
 
 %     indCell_highSNR = find(snrs>mean(snrs)); 
