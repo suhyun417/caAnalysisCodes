@@ -1,9 +1,8 @@
-% temp_registerSession.m
+% genFig_registerSessions.m
 %
-% 2021/09/28 SHP
-% Registration across daily sessions using NoRMCorre
-% For a given FOV, register daily sessions to the first day, using first
-% run as a template
+% 2022/08/30 SHP
+% - visualization of longitudinal registration results
+% - same neuron's responses across trials over days
 
 clear all;
 
@@ -38,20 +37,155 @@ setSubj ={'Tabla', 'Max'};
 
 dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
-iSubj = 1; %1:length(setSubj)
-nameSubj = setSubj{iSubj};
-
-% get session info
-[infoSession, opts] = readInfoSession(nameSubj);
+nameSubj = 'Max'; %'Tabla'; %'Max'; %'Tabla';
+FOV_ID = 3; %1;
+[infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
 
 [c, ia, indRun] = unique(infoSession.(1), 'sorted');
 setDateSession = c(2:end); % 1st one is always empty
 nSession = length(setDateSession);
 
-% Load the reference image (first session)
-dirRefImage = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/_preproc',...
-    nameSubj, setDateSession{1}));
-imgRef = loadtiff(fullfile(dirRefImage, 'mc_template.tif'));
+% % Load the reference image (first session)
+% dirRefImage = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/_preproc',...
+%     nameSubj, setDateSession{1}));
+% imgRef = loadtiff(fullfile(dirRefImage, 'mc_template.tif'));
+
+
+%% load saved files
+% cell-center info pooled across days
+fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_stackedCenter.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID)); 
+load(fname_stack, 'stackCellCenter')
+
+% cell quality info 
+fname_cellQC = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellQC.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID)); 
+load(fname_cellQC, 'infoCells')
+
+% translational shift across days
+fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_shifts.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID));  
+load(fname_shifts, 'shifts')
+    
+
+%% Stacked cells across days
+isCell = ~isnan(stackCellCenter);
+catCell = sum(isCell, 3);
+figure;
+imagesc(catCell)
+% catCell(8:14, 102:107)
+% stackCellCenter(8:14, 102:107, :)
+
+cellID = [86 75 96 69 55 61 63 nan]; %[6 10 13 10 12 8 6 nan]; %[109 93 113 nan nan 76 74 nan]; %[91 81 104 75 nan 64 nan nan]; %[69 53 68 nan 35 nan nan nan]; %[21 12 21 18 nan 12 12 16]; %[48 33 45 34 nan 32 33 32]; %[34 20 32 nan nan 28 23 25]; %[118 nan 28 nan nan 17 17 nan]; %[83 68 92 61 48 55 58 50]; %from Max FOV3
+nameSubj = 'Max'; %'Tabla';
+FOV_ID = 3; %1;
+% [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
+% 
+% [c, ia, indRun] = unique(infoSession.(1), 'sorted');
+% setDateSession = c(2:end); % 1st one is always empty
+% nSession = length(setDateSession);
+
+tempMatTS1 = []; tempMatTS2 = []; nTrial = [];
+for iS = 1:length(cellID)
+
+    if isnan(cellID(iS))
+        continue;
+    end
+
+    dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+    % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
+
+    dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+
+    load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
+
+    figure(200);
+    subplot(2,1,1)
+    title('Mov 1')
+    plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
+    hold on
+
+    tempMatTS1 = cat(1, tempMatTS1, squeeze(tS_session(1).matTS_norm(:, cellID(iS), :))');        
+    nTrial = cat(1, nTrial, size(tempMatTS1, 1));
+
+    subplot(2,1,2)
+    title('Mov 2')
+    plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
+    hold on
+
+    tempMatTS2 = cat(1, tempMatTS2, squeeze(tS_session(2).matTS_norm(:, cellID(iS), :))');
+end
+
+tempValidS = ~isnan(cellID);
+
+figure;
+set(gcf, 'color', 'w')
+subplot(2,1,1)
+imagesc(tempMatTS1);
+set(gca, 'XTickLabel', 20:20:120, 'YTick', nTrial, 'YTickLabel', setDateSession(tempValidS),'TickDir', 'out', 'Box', 'off')
+title('Mov 1')
+colormap(hot)
+subplot(2,1,2)
+imagesc(tempMatTS2);
+set(gca, 'XTickLabel', 20:20:120, 'YTick', nTrial, 'YTickLabel', setDateSession(tempValidS),'TickDir', 'out', 'Box', 'off')
+title('Mov 2')
+xlabel('Time (s)')
+colormap(hot)
+
+% %% playing
+% for i = 1:length(infoCells)
+%     indlow10 = [];
+%     indlow10 = find(infoCells(i).pnrs<10);
+%     
+%     [sortpnrs, indsort] = sort(infoCells(i).pnrs, 'descend');
+%     indtop10 = indsort(1:10);
+%     
+%     figure(100)
+%     plot(infoCells(i).cellCenter(indtop10,2), infoCells(i).cellCenter(indtop10, 1), '.', 'MarkerSize', 15);
+%     set(gca, 'YDir', 'reverse')
+%     hold on;
+%     input('')
+% end
+
+% %% plot movie tseries of potential same cell
+% cellID = [22 16 14 17 19 18 nan nan nan 5 9 24]; % from Tabla FOV1
+% nameSubj = 'Tabla'; %'Max'; %'Tabla';
+% FOV_ID = 1; %3; %1;
+% [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
+% 
+% [c, ia, indRun] = unique(infoSession.(1), 'sorted');
+% setDateSession = c(2:end); % 1st one is always empty
+% nSession = length(setDateSession);
+% tempMatTS1 = []; tempMatTS2 = [];
+% for iS = 1:length(cellID)
+%     
+%     if isnan(cellID(iS))
+%         continue;
+%     end
+%         
+%     dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+%     % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
+%     
+%     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+%     
+%     load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
+%     
+%     figure(200);
+%     subplot(2,1,1)
+%     title('Mov 1')
+%     plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
+%     hold on
+%     
+%     tempMatTS1 = cat(1, tempMatTS1, squeeze(tS_session(1).matTS_norm(:, cellID(iS), :))');
+%     
+%     subplot(2,1,2)
+%     title('Mov 2')
+%     plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
+%     hold on
+%     
+%     tempMatTS2 = cat(1, tempMatTS2, squeeze(tS_session(2).matTS_norm(:, cellID(iS), :))');
+% end
+    
 
 for iSession = 2:nSession
     % Load session image to align to the reference image
