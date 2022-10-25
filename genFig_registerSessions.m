@@ -1,6 +1,6 @@
 % genFig_registerSessions.m
 %
-% 2022/08/30 SHP
+% 2022/10 SHP
 % - visualization of longitudinal registration results
 % - same neuron's responses across trials over days
 
@@ -32,13 +32,15 @@ addpath(fullfile(dirProjects, '_toolbox/Fast_Tiff_Write/'));
 addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 % gcp; % for parallel processingls
 
+dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
+
+
 %% Session info & optional parameters
 setSubj ={'Tabla', 'Max'};
 
-dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
-nameSubj = 'Max'; %'Tabla'; %'Max'; %'Tabla';
-FOV_ID = 3; %1;
+nameSubj = 'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+FOV_ID = 3; %1; %3; %1;
 [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
 
 [c, ia, indRun] = unique(infoSession.(1), 'sorted');
@@ -68,7 +70,7 @@ fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/
 load(fname_shifts, 'shifts')
     
 
-%% Stacked cells across days
+%% Stacked cells across days: playing with examples
 isCell = ~isnan(stackCellCenter);
 catCell = sum(isCell, 3);
 figure;
@@ -131,6 +133,255 @@ set(gca, 'XTickLabel', 20:20:120, 'YTick', nTrial, 'YTickLabel', setDateSession(
 title('Mov 2')
 xlabel('Time (s)')
 colormap(hot)
+
+
+%% Visualization of cell contours across days
+cellColor = hsv(nSession);
+% cellColor = [166,206,227;...
+% 31,120,180;...
+% 178,223,138;...
+% 51,160,44;...
+% 251,154,153;...
+% 227,26,28;...
+% 253,191,111;...
+% 255,127,0;...
+% 202,178,214;...
+% 106,61,154;...
+% 255,255,153;...
+% 177,89,40]./255; 
+fig_acSession = figure;
+set(fig_acSession, 'Color', 'w')
+
+for iSession = 1:nSession
+% iSession = 1; 
+dateSession = setDateSession{iSession}; %'20191113'; %setDateSession{iSession};
+
+dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+dirPreproc = fullfile(dirProcdata_session, '_preproc');
+
+
+%%
+addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
+cnmfe_setup;
+d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
+
+load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
+
+validIndCell = [];
+validIndCell(:,1) = 1:length(neuron.ids);
+if strcmpi(nameSubj, 'max')
+    load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
+    validIndCell = indCell.validCell;
+end
+
+% % % sort the cells based on PNR
+% % [a, sortedIndCell] = sort(infoCells(iSession).pnrs, 'descend');
+% [sortedIndCell] = orderROIs(neuron, 'circularity');
+
+% color cells to indicate sessions
+
+thr = 0.3;
+widthContour = 1.5;
+Coor = neuron.get_contours(thr); 
+infoCells(iSession).coor_0p3 = Coor;
+
+figure(fig_acSession);
+for i = 1:size(Coor, 1)
+    %         cont = medfilt1(Coor{i}')';
+    cont = Coor{i};
+    if size(cont,2) > 1 % "shifts" values are in the order of image matrix dimensions: first dimension is vertical ("y") and second dimension is horizontal ("x")
+        plot(cont(1,1:end)+shifts(iSession, 2), cont(2,1:end)+shifts(iSession, 1), 'Color', cellColor(iSession, :), 'linewidth', widthContour); hold on;
+    end
+end
+end
+axis tight
+
+for thr = [0.2:0.1:0.5]
+    locbad=[]; nrows=[]; ncols=[];
+Coor = neuron.get_contours(thr); 
+[nrows, ncols] = cellfun(@size, Coor);
+locbad = find(ncols<2); % the ones that get_contours couldn't get a reasonable localized contour at this threshold
+length(locbad)
+end
+
+figure;
+for iC = 1:length(locbad)    
+    i = locbad(iC);
+    A_temp = full(reshape(neuron.A(:,i),d1,d2));
+    A_temp = medfilt2(A_temp,[3,3]);
+    A_temp = A_temp(:);
+    [temp,ind] = sort(A_temp(:).^2,'ascend');
+    temp =  cumsum(temp);
+    ff = find(temp > (1-thr)*temp(end),1,'first');
+    if ~isempty(ff)
+        CC{i} = contour(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor', 'b'); hold on;
+    end
+    set(gca, 'YDir', 'reverse', 'XLim', [0 d2], 'YLim', [0 d1])
+    input('')
+end
+
+%% order_ROIs
+function [srt] = orderROIs(obj, srt)
+%% order neurons
+% srt: sorting order
+nA = sqrt(sum(obj.A.^2));
+nr = length(nA);
+if nargin<2
+    srt='srt';
+end
+K = size(obj.C, 1);
+
+if ischar(srt)
+    if strcmpi(srt, 'decay_time')
+        % time constant
+        if K<0
+            disp('Are you kidding? You extracted 0 neurons!');
+            return;
+        else
+            taud = zeros(K, 1);
+            for m=1:K
+                temp = ar2exp(obj.P.kernel_pars(m));
+                taud(m) = temp(1);
+            end
+            [~, srt] = sort(taud);
+        end
+    elseif strcmp(srt, 'mean')
+        if obj.options.deconv_flag
+            temp = mean(obj.C,2)'.*sum(obj.A);
+        else
+            temp = mean(obj.C,2)'.*sum(obj.A)./obj.P.neuron.sn';
+        end
+        [~, srt] = sort(temp, 'descend');
+    elseif strcmp(srt, 'sparsity_spatial')
+        temp = sqrt(sum(obj.A.^2, 1))./sum(abs(obj.A), 1);
+        [~, srt] = sort(temp);
+    elseif strcmp(srt, 'sparsity_temporal')
+        temp = sqrt(sum(obj.C_raw.^2, 2))./sum(abs(obj.C_raw), 2);
+        [~, srt] = sort(temp, 'descend');
+    elseif strcmp(srt, 'circularity')
+        % order neurons based on its circularity
+        tmp_circularity = zeros(K,1);
+        for m=1:K
+            [w, r] = nnmf(obj.reshape(obj.A(:, m),2), 1);
+            ky = sum(w>max(w)*0.3);
+            kx = sum(r>max(r)*0.3);
+            tmp_circularity(m) = abs((kx-ky+0.5)/((kx+ky)^2));
+        end
+        [~, srt] = sort(tmp_circularity, 'ascend');
+    elseif strcmpi(srt, 'pnr')
+        pnrs = max(obj.C, [], 2)./std(obj.C_raw-obj.C, 0, 2);
+        [~, srt] = sort(pnrs, 'descend');
+    elseif strcmpi(srt, 'temporal_cluster')
+        obj.orderROIs('pnr');
+        dd = pdist(obj.C_raw, 'cosine');
+        tree = linkage(dd, 'complete');
+        srt = optimalleaforder(tree, dd);
+    elseif strcmpi(srt, 'spatial_cluster')
+        obj.orderROIs('pnr');
+        A_ = bsxfun(@times, obj.A, 1./sqrt(sum(obj.A.^2, 1)));
+        temp = 1-A_' * A_;
+        dd = temp(tril(true(size(temp)), -1));
+        dd = reshape(dd, 1, []);
+        tree = linkage(dd, 'complete');
+        srt = optimalleaforder(tree, dd);
+    else %if strcmpi(srt, 'snr')
+        snrs = var(obj.C, 0, 2)./var(obj.C_raw-obj.C, 0, 2);
+        [~, srt] = sort(snrs, 'descend');
+    end
+end
+obj.A = obj.A(:, srt);
+obj.C = obj.C(srt, :);
+
+%
+% figure;
+
+
+thr = 0.2;
+CC = cell(size(neuron.A, 2),1);
+CR = cell(size(neuron.A, 2),2);
+% cmap_cell = cool(size(neuron.A, 2));
+for iCC = 1:size(neuron.A ,2)
+    i = iCC; %sortedIndCell(iCC);
+    A_temp = full(reshape(neuron.A(:,i),d1,d2));
+    A_temp = medfilt2(A_temp,[3,3]);
+    A_temp = A_temp(:);
+    [temp,ind] = sort(A_temp(:).^2,'ascend');
+    temp =  cumsum(temp);
+    ff = find(temp > (1-thr)*temp(end),1,'first');
+    if ~isempty(ff)
+        CC{i} = contour(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor',cellColor(iSession, :), 'linewidth', widthContour);
+        fp = find(A_temp >= A_temp(ind(ff)));
+        [ii,jj] = ind2sub([d1,d2],fp);
+        CR{i,1} = [ii,jj]';
+        CR{i,2} = A_temp(fp)';
+    end
+    hold on;
+end
+axis off
+
+
+% title(sprintf('%s: %s', nameSubj, dateSession))
+
+
+
+
+
+% get the contours and image field of view
+% neuron_b = neuron.batches{1}.neuron;
+
+% Generate cell location map within FOV
+thr = 0.5; % the lower the smaller (more centralized) the contour
+cellColor = [1 1 1];
+widthContour = 1;
+[d1,d2] = size(neuron.Cn);
+
+figure;
+imagesc(zeros(d1, d2)); % background
+colormap(gray);
+caxis([0 0.1]);
+hold on;
+
+CC = cell(size(neuron.A, 2),1);
+CR = cell(size(neuron.A, 2),2);
+for i = 1:size(neuron.A ,2)
+    A_temp = full(reshape(neuron.A(:,i),d1,d2));
+    A_temp = medfilt2(A_temp,[3,3]);
+    A_temp = A_temp(:);
+    [temp,ind] = sort(A_temp(:).^2,'ascend');
+    temp =  cumsum(temp);
+    ff = find(temp > (1-thr)*temp(end),1,'first');
+    if ~isempty(ff)
+        CC{i} = contourf(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor',cellColor, 'linewidth', widthContour);
+        fp = find(A_temp >= A_temp(ind(ff)));
+        [ii,jj] = ind2sub([d1,d2],fp);
+        CR{i,1} = [ii,jj]';
+        CR{i,2} = A_temp(fp)';
+    end
+    hold on;
+end
+axis off
+title(sprintf('%s: %s', nameSubj, dateSession))
+% %save
+% print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
+
+% end
+%
+
+% thr = 0.3; % the lower the smaller (more centralized) the contour
+Coor = neuron.get_contours(thr);
+imgFOV = neuron.Cn.*neuron.PNR;
+
+%         figure;
+% neuron.show_contours([], [], imgFOV, 'true');
+
+figure;
+[center] = neuron.estCenter();
+imagesc(imgFOV); colormap(gray);
+hold on
+plot(center(:,2), center(:, 1), 'r.');
+text(center(:,2)+1, center(:,1), num2str([1:length(neuron.ids)]'), 'Color', 'w');
+
+
 
 % %% playing
 % for i = 1:length(infoCells)

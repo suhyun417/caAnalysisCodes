@@ -1,4 +1,11 @@
 % runSaveCellQC.m
+%
+% 2022/10/25 SHP 
+% - add the procedure of selecting out spatially more localized cells at
+% the level of 80% (infoCells(iSession).indCellValid_spatialCluster_0p2)
+% - remove the part that exclude cells from Max's FOV ROI-based methods
+%   : instead, just carrying that info here (infoCells(iSession).indCellValid_fov)
+%   so that it is available with the spatial-localization-based valid cell indices 
 % 2022/06/01 SHP
 % - load each session and save the SNR, PNR, number of cells, etc.
 %
@@ -20,8 +27,8 @@ flagSaveFile = 1;
 
 
 %% Get session info
-nameSubj = 'Tabla'; %'Max'; %'Tabla';
-FOV_ID = 1; %3; %1;
+nameSubj = 'Max'; %'Tabla';
+FOV_ID = 3; %1;
 [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
 
 [c, ia, indRun] = unique(infoSession.(1), 'sorted');
@@ -48,21 +55,10 @@ for iSession = 1:length(setDateSession)
     
     load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
     
-    validIndCell = [];
-    validIndCell(:,1) = 1:length(neuron.ids);
-    if strcmpi(nameSubj, 'max')
-        load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
-        validIndCell = indCell.validCell;
-    end
-    
-    
     %% Cell quality check using SNR and PNR
     snrs = var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2); % signal variance divided by noise variance
     pnrs = max(neuron.C, [], 2)./std(neuron.C_raw-neuron.C, 0, 2); % peak amplitude divided by noise std
-    
-    snrs = snrs(validIndCell);
-    pnrs = pnrs(validIndCell);
-    
+   
     [a, sortedID_snr] = sort(snrs, 'descend');
     [aa, sortedID_pnr] = sort(pnrs, 'descend');
     
@@ -72,7 +68,12 @@ for iSession = 1:length(setDateSession)
     
     imgFOV = neuron.Cn.*neuron.PNR;
     [center] = neuron.estCenter();
-    center = center(validIndCell, :);
+    
+    thr = 0.2;
+    Coor = neuron.get_contours(thr); 
+    [nrows, ncols] = cellfun(@size, Coor);
+    locClustered = find(ncols > 2); % the ones with a reasonable localized contour at this threshold
+
     
 %     figure    
 %     imagesc(imgFOV)
@@ -87,6 +88,14 @@ for iSession = 1:length(setDateSession)
     infoCells(iSession).snrs_mean = mean(snrs);
     infoCells(iSession).indCell_highSNR = find(snrs>mean(snrs));
     infoCells(iSession).indCell_highPNR = find(snrs>mean(pnrs));
+    infoCells(iSession).coor_0p2 = Coor; 
+    infoCells(iSession).indCellValid_fov = 1:length(neuron.ids);
+    if strcmpi(nameSubj, 'max')
+        load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
+        infoCells(iSession).indCellValid_fov = indCell.validCell;
+    end
+    infoCells(iSession).indCellValid_spatialCluster_0p2 = locClustered;
+%     infoCells(iSession).coor_0p5 = neuron.get_contours(0.5);
     
     
     % Basic info
@@ -261,21 +270,21 @@ end
 %     % print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
 %     
 %     % end
-%     %
-    Coor = neuron.get_contours(thr); % Coor = get_contours(obj, thr, ind_show); % ind_show: indices of cells you want to get contours
-    imgFOV = neuron.Cn.*neuron.PNR;
-    
-    % % draw all the contours
-    % neuron_b.show_contours([], [], imgFOV, 'true');
-    
-    figure
-    [center] = neuron.estCenter();
-    center = center(validIndCell, :);
-    imagesc(imgFOV)
-    hold on
-    plot(center(:,2), center(:, 1), 'r.')
-    text(center(:,2)+1, center(:,1), num2str([1:size(center,1)]'), 'Color', 'w');
-    axis off
+% %     %
+%     Coor = neuron.get_contours(thr); % Coor = get_contours(obj, thr, ind_show); % ind_show: indices of cells you want to get contours
+%     imgFOV = neuron.Cn.*neuron.PNR;
+%     
+%     % % draw all the contours
+%     % neuron_b.show_contours([], [], imgFOV, 'true');
+%     
+%     figure
+%     [center] = neuron.estCenter();
+%     center = center(validIndCell, :);
+%     imagesc(imgFOV)
+%     hold on
+%     plot(center(:,2), center(:, 1), 'r.')
+%     text(center(:,2)+1, center(:,1), num2str([1:size(center,1)]'), 'Color', 'w');
+%     axis off
 
     
    
