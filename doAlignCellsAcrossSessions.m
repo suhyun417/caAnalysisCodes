@@ -8,22 +8,14 @@ function [] = doAlignCellsAcrossSessions(nameSubj, FOV_ID, flagSaveFile)
 %   apply shifts, then assign the cell ID to the selected (above threshold)
 %    indices. Save this cell ID spatial component matrix for each
 %   session.
-%   2. Start from the Cell 1 of Session 1, gather the contents (i.e. cell
-%   ID from each session) from the corresponding spatial location from the
-%   matrix saved in Step #1. Now you have the Cell IDs from other sessions
-%   recorded from the overlapping spatial location of the Cell 1 of Session 1.
-%   
+%   2. Start from Cell 1 of Session 1, gather the cell ID from each session 
+%   from the corresponding spatial location from the
+%   matrix saved in Step #1. If there is at least one cell matched to the
+%   location of this particular cell, record the cell ID(s) in a separate
+%   matrix (cellIDAcrossDay).
+%   -Results are saved as SUBJ_FOV#_cellAcrossDay.mat
 % 
 
-
-
-% 2021/12/14 SHP
-% Aseemble cell center positions across daily sessions for a given FOV
-% using the shifts saved in SUBJ_FOV#_shifts.mat
-% - Create a grid space in n x n pixel resolution
-% Pool in the pixel space. imagine a grid in n x n pixel
-% resolution (e.g. 3 pixels? I can choose the criterion) and make a list of
-% grid in columnar way. Then gather cell IDs from the REF and SES 
 
 %% settings
 flagBiowulf = 0; %1; %0;
@@ -53,6 +45,7 @@ addpath(fullfile(dirProjects, '_toolbox/CNMF_E/'));
 cnmfe_setup;
 % gcp; % for parallel processingls
 
+
 %% Session info & optional parameters
 % nameSubj = 'Tabla';
 % FOV_ID = 1;
@@ -63,43 +56,61 @@ cnmfe_setup;
 setDateSession = c(2:end); % 1st one is always empty
 nSession = length(setDateSession);
 
-%%
+%% load necessary files 
+% registration info
 fname_shifts = fullfile(dirProjects, sprintf('0Marmoset/Ca/tempData/%s_FOV%d_shifts.mat', nameSubj, FOV_ID));
 load(fname_shifts, 'shifts')
 
-stackCellCenter = [];
+% cell quality info 
+fname_cellQC = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellQC.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID)); 
+load(fname_cellQC, 'infoCells')
+
+%% apply shift to each cell's spatial component, then save the registered spatial info in matrix
+% stackCellCenter = [];
+cellAcrossDay = struct([]);
 for iSession = 1:nSession
+    
+    fprintf(1, '\n Processing %s session %d/%d...\n', nameSubj, iSession, nSession)
 
     d_sources2D = dir(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/Sources2D_all*',...
         nameSubj, setDateSession{iSession})));
     load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
     
-    thr = 0.3; % the lower the smaller (more centralized) the contour   
+    thr = 0.2; %0.3; % the lower the smaller (more centralized) the contour   
     [d1,d2] = size(neuron.Cn); %d1: FOV vertical, d2: FOV horizontal
-    Coor = neuron.get_contours(thr); 
+%     Coor = neuron.get_contours(thr); 
     
-    figure;
-    for i = 1:size(Coor, 1)
-        %         cont = medfilt1(Coor{i}')';
-        cont = Coor{i};
-        if size(cont,2) > 1 % "shifts" values are in the order of image matrix dimensions: first dimension is vertical ("y") and second dimension is horizontal ("x")
-            plot(cont(1,1:end)+shifts(iSession, 2), cont(2,1:end)+shifts(iSession, 1), 'Color', cellColor(iSession, :), 'linewidth', widthContour); hold on;
-        end
-        set(gca, 'YDir', 'reverse', 'XLim', [0 d2], 'YLim', [0 d1])
-    end
-    set(gca, 'YDir', 'reverse', 'XLim', [0 d2], 'YLim', [0 d1])
-
+%     figure;
+%     for i = 1:size(Coor, 1)
+%         %         cont = medfilt1(Coor{i}')';
+%         cont = Coor{i};
+%         if size(cont,2) > 1 % "shifts" values are in the order of image matrix dimensions: first dimension is vertical ("y") and second dimension is horizontal ("x")
+%             plot(cont(1,1:end)+shifts(iSession, 2), cont(2,1:end)+shifts(iSession, 1), 'Color', cellColor(iSession, :), 'linewidth', widthContour); hold on;
+%         end
+%         set(gca, 'YDir', 'reverse', 'XLim', [0 d2], 'YLim', [0 d1])
+%     end
     
-    curCanvas = NaN(size(neuron.Cn));
+%     curCanvas = NaN(size(neuron.Cn));
     stackCell = NaN(size(neuron.A));
+    invalidCell = []; % any cell that may not pass the below procedure
+    validCell = intersect(infoCells(iSession).indCellValid_spatialCluster_0p2, infoCells(iSession).indCellValid_fov);
     
     for i = 1:size(neuron.A ,2)
+        if ~ismember(i, validCell)
+            continue;
+        end
         A_temp = full(reshape(neuron.A(:,i),d1,d2));
         A_temp = medfilt2(A_temp,[3,3]);
         A_temp = A_temp(:);
         [temp,ind] = sort(A_temp(:).^2,'ascend');
         temp =  cumsum(temp);
         ff = find(temp > (1-thr)*temp(end),1,'first'); % cumulative index
+        
+        if A_temp(ind(ff)) < 0 
+            invalidCell = cat(1, invalidCell, i);
+            continue;
+        end
         fp = find(A_temp >= A_temp(ind(ff)));
         [ii,jj] = ind2sub([d1,d2],fp);
         
@@ -107,102 +118,88 @@ for iSession = 1:nSession
         clear ii_shift jj_shift fp_shift
         ii_shift = round(ii+shifts(iSession,1)); 
         jj_shift = round(jj+shifts(iSession,2)); % 
+        
+        if min([ii_shift;jj_shift])<=0 || max(ii_shift)>d1 || max(jj_shift)>d2 % if out of range
+            locvalidpix = sum(cat(2, ii_shift>0, ii_shift<d1, jj_shift>0, jj_shift<d2), 2)>3;
+            ii_shift = ii_shift(locvalidpix);
+            jj_shift = jj_shift(locvalidpix);
+        end
         fp_shift = sub2ind([d1, d2], ii_shift, jj_shift);
                 
-        curCanvas(fp_shift) = i;
+%         curCanvas(fp_shift) = i;
         stackCell(fp_shift, i) = i;
     end
+    
+    cellAcrossDay(iSession).stackCell = stackCell;
+    cellAcrossDay(iSession).invalidCell = invalidCell;
+end
   
-    
-    
-%     dims = size(neuron.Cn);
-    [center] = neuron.estCenter() + shifts(iSession, :); % this is y and x for each cell in image coordinate ([0,0] is upper left corner)
-    
-    indValidCell = 1:length(center);
-    if sum(max(round(center)) > size(neuron.Cn))|| sum(min(round(center)) <= 0)
-        indValidCell = find(sum(cat(2, round(center(:,1))<size(neuron.Cn,1), round(center(:,2))<size(neuron.Cn,2), ...
-            round(center(:,1)) > 0, round(center(:,2)) > 0 ), 2) > 3);
-    end        
-    
-    locCell = sub2ind(size(neuron.Cn), round(center(indValidCell,1)), round(center(indValidCell,2)));
-    curCanvas = NaN(size(neuron.Cn));
-    curCanvas(locCell) = indValidCell;
-    
-    % figure
-    % imagesc(curCanvas)
-    % imagesc(curCanvas, 'AlphaData', ~isnan(curCanvas))
-    % colormap(lines)
-    
-    stackCellCenter = cat(3, stackCellCenter, curCanvas);
+ 
+%% Make a session - cell id matrix
+idMatrix = [];
+for iS = 1:nSession
+    for iCell = 1:size(cellAcrossDay(iS).stackCell, 2)
+        cellCount = size(idMatrix, 1);
+        idMatrix(cellCount+1, 1) = iS;
+        idMatrix(cellCount+1, 2) = iCell;
+    end
 end
 
+%% create a checkbox
+flagDone = NaN(size(idMatrix, 1), 1);
+for iCell = 1:size(idMatrix,1)
+    idSession = idMatrix(iCell, 1);
+    idCell = idMatrix(iCell, 2);
+    if ismember(idCell, intersect(infoCells(idSession).indCellValid_spatialCluster_0p2, infoCells(idSession).indCellValid_fov))...
+            && ~ismember(idCell, cellAcrossDay(idSession).invalidCell)
+        flagDone(iCell) = 0;
+    end
+end
 
-isCell = ~isnan(stackCellCenter);
-catCell = sum(isCell, 3);
+%% For each cell, check the corresponding cells from other sessions
+bigStackCell = cat(2, cellAcrossDay(:).stackCell); % pixel by cells (from all the sessions)
+cellIDAcrossDay = [];
+countSuperCell = 0;
+for iCell = 1:length(flagDone)
+%     idSession = idMatrix(iCell, 1);
+%     idCell = idMatrix(iCell, 2);
+    
+    if isnan(flagDone(iCell)) || flagDone(iCell) % if it's not valid or checked already, skip
+        continue;
+    end
+    
+    % current cell's spatial location
+    curSite = ~isnan(bigStackCell(:,iCell));
+    
+    % look for other cells here
+    candidateCells = ~isnan(min(bigStackCell(curSite, :)));
+    
+    if ~isempty(candidateCells)
+        countSuperCell = countSuperCell + 1;  
+        tempID = NaN(1, length(cellAcrossDay)); % one row for each
+        tempID(idMatrix(candidateCells, 1)) = idMatrix(candidateCells, 2);
+        
+        cellIDAcrossDay(countSuperCell, :) = tempID;
+        flagDone(candidateCells) = 1;
+    else
+        continue;
+    end
+end
 
+%
+paramAlignCells.idMatrix = idMatrix;
+paramAlignCells.flagDone = flagDone;
 
-
-% tempStack = sum(~isnan(stackCellCenter), 3); % # of cells per each pixel space
-% figure;
-% imagesc(tempStack) 
-% 
-% cat(2, squeeze(stackCellCenter(45, 219, :)), squeeze(stackCellCenter(42, 218, :)), squeeze(stackCellCenter(46, 218, :)), ...
-%     squeeze(stackCellCenter(47, 218, :)), squeeze(stackCellCenter(44, 217, :)), squeeze(stackCellCenter(45, 217, :)))
-% cat(2, squeeze(stackCellCenter(10, 105, :)), squeeze(stackCellCenter(10, 103, :)), squeeze(stackCellCenter(11, 104, :)), squeeze(stackCellCenter(9, 106, :)), squeeze(stackCellCenter(13, 104, :)))
 
 if flagSaveFile
 %     fname_stack = fullfile(dirProjects, sprintf('0Marmoset/Ca/tempData/%s_FOV%d_stackedCenter.mat', nameSubj, FOV_ID));
-    fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_stackedCenter.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-    save(fname_stack, 'stackCellCenter')
+    fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellAcrossDay.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+    save(fname_stack, 'cellAcrossDay', 'paramAlignCells', 'cellIDAcrossDay')
+    fprintf(1, '\n Saving files for %s FOV %d: in total %d/%d cells aligned \n', nameSubj, FOV_ID, countSuperCell, length(flagDone))
 end
 
 
 
-% critPixel = 2; % criterion to be near enough
-% 
-% 
-% 
-% 
-% 
-% shifts = NaN(nSession, 2);
-% shifts(1, :) = [0 0]; % 1st is always the ref
-% for iSession = 2:nSession
-%     % Load session image to align to the reference image
-%     dateSession = setDateSession{iSession};
-%     dirSessionImage = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/_preproc',...
-%         nameSubj, dateSession));
-%     imgSession = loadtiff(fullfile(dirSessionImage, 'mc_template.tif'));
-%     
-%     %     paramHPF.gSig = 7;
-%     %     paramHPF.gSiz = 17;
-%     paramRegister.bound = 0; %40;
-%     %     paramHPF.imfilter = 'imfilter(Yf,psf,''symmetric'')';
-%     
-%     %     Yf = loadtiff(fname);
-%     [d1,d2,T] = size(imgSession);
-%     
-%     bound = paramRegister.bound; %40; %0;
-%     
-%     % set options
-%     %     [p, nameIn, ext] = fileparts(fname);
-%     clear options_r
-%     options_r = NoRMCorreSetParms('d1',d1-bound,'d2',d2-bound,'max_shift',20,'iter',1,'correct_bidir',false, ...
-%         'output_type', 'mat'); %'tif', 'tiff_filename', './registrationTest_rgm.tif');%,'bin_width',T, ...
-%     paramRegister.options_r = options_r;
-%     
-%     % register using the high pass filtered data and apply shifts to original data
-%     tic; [M1,shifts1,template1] = normcorre(imgSession(bound/2+1:end-bound/2,bound/2+1:end-bound/2),options_r, imgRef); toc % register filtered data
-%     %      [M_final,shifts,template,options,col_shift] = normcorre(Y,options,template);
-%     % apply shifts and save it as desired format described in the options
-%     %     tic; Mrg = apply_shifts(imgSession,shifts1,options_r,bound/2,bound/2); toc
-%     
-%     shifts(iSession, :) = squeeze(shifts1.shifts)';
-%     diff(iSession, 1) = shifts1.diff;
-    
-    
-    
-    
-    
     
     
     
