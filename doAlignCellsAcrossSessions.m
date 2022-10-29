@@ -173,14 +173,48 @@ for iCell = 1:length(flagDone)
     
     % look for other cells here
     candidateCells = ~isnan(min(bigStackCell(curSite, :)));
-    
-    if ~isempty(candidateCells)
-        countSuperCell = countSuperCell + 1;  
+        
+    if sum(candidateCells)>1
+        
+        countSuperCell = countSuperCell + 1;
         tempID = NaN(1, length(cellAcrossDay)); % one row for each
-        tempID(idMatrix(candidateCells, 1)) = idMatrix(candidateCells, 2);
+        
+        locCandidateCells = find(candidateCells>0);
+        
+        % check whether it's more than one cell from each session
+        tempSession = idMatrix(candidateCells, 1);
+        [a b c] = unique(tempSession);
+        if length(c) > length(a) % if there are more than one cell from one session captured
+            
+            tempSizeCell = sum(~isnan(bigStackCell(curSite, candidateCells)));
+            
+            indValid_candidateCells = [];
+            for iSS = 1:length(a) % unique sessions
+                if sum(c==a(iSS))>1 % more than one cell from this session
+                    setDup = find(c==a(iSS));
+                    [~, ind] = max(tempSizeCell(setDup)); % the one overlaps with the current cell most
+                    indValid_candidateCells = cat(2, indValid_candidateCells, setDup(ind));
+                else
+                    indValid_candidateCells = cat(2, indValid_candidateCells, b(iSS));
+                end
+            end
+                   
+            locCandidateCells = locCandidateCells(indValid_candidateCells);            
+%             fprintf(1, 'iCell %d: more than one cell found', iCell);
+%             idMatrix(candidateCells, :)
+%             input('')
+        else
+            locCandidateCells = find(candidateCells>0);
+        %         tempIDCandidate = idMatrix(candidateCells, :);
+        end        
+        
+        
+        tempID(idMatrix(locCandidateCells, 1)) = idMatrix(locCandidateCells, 2);
         
         cellIDAcrossDay(countSuperCell, :) = tempID;
-        flagDone(candidateCells) = 1;
+        flagDone(locCandidateCells) = 1;
+        bigStackCell(:, locCandidateCells) = NaN;
+        
     else
         continue;
     end
