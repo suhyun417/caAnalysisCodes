@@ -158,8 +158,9 @@ end
 
 %% For each cell, check the corresponding cells from other sessions
 bigStackCell = cat(2, cellAcrossDay(:).stackCell); % pixel by cells (from all the sessions)
+bigStackCell(:, isnan(flagDone)) = NaN; % invalid cells
 cellIDAcrossDay = [];
-countSuperCell = 0;
+countValidCell = 0;
 for iCell = 1:length(flagDone)
 %     idSession = idMatrix(iCell, 1);
 %     idCell = idMatrix(iCell, 2);
@@ -168,15 +169,16 @@ for iCell = 1:length(flagDone)
         continue;
     end
     
+    countValidCell = countValidCell + 1;    
+
     % current cell's spatial location
     curSite = ~isnan(bigStackCell(:,iCell));
     
-    % look for other cells here
+    % look for other cells occupying here
     candidateCells = ~isnan(min(bigStackCell(curSite, :)));
+      
+    if sum(candidateCells, 2)>1      
         
-    if sum(candidateCells)>1
-        
-        countSuperCell = countSuperCell + 1;
         tempID = NaN(1, length(cellAcrossDay)); % one row for each
         
         locCandidateCells = find(candidateCells>0);
@@ -190,8 +192,8 @@ for iCell = 1:length(flagDone)
             
             indValid_candidateCells = [];
             for iSS = 1:length(a) % unique sessions
-                if sum(c==a(iSS))>1 % more than one cell from this session
-                    setDup = find(c==a(iSS));
+                if sum(tempSession==a(iSS))>1 % more than one cell from this session
+                    setDup = find(tempSession==a(iSS));
                     [~, ind] = max(tempSizeCell(setDup)); % the one overlaps with the current cell most
                     indValid_candidateCells = cat(2, indValid_candidateCells, setDup(ind));
                 else
@@ -206,17 +208,39 @@ for iCell = 1:length(flagDone)
         else
             locCandidateCells = find(candidateCells>0);
         %         tempIDCandidate = idMatrix(candidateCells, :);
-        end        
-        
+        end   
         
         tempID(idMatrix(locCandidateCells, 1)) = idMatrix(locCandidateCells, 2);
         
-        cellIDAcrossDay(countSuperCell, :) = tempID;
+        cellIDAcrossDay(countValidCell, :) = tempID;
         flagDone(locCandidateCells) = 1;
         bigStackCell(:, locCandidateCells) = NaN;
         
-    else
-        continue;
+    else % if no overlapping cells
+        if contains(lower(nameSubj), 'tab') && iCell == 211 % manual fixing for Tabla's cell
+            locCandidateCells = [211 295 423 522 706 1014 1128];
+            tempID = [NaN 87 67 79 83 NaN 49 NaN NaN 72 76 NaN];
+            
+            cellIDAcrossDay(countValidCell, :) = tempID;
+            flagDone(locCandidateCells) = 1;
+            bigStackCell(:, locCandidateCells) = NaN;
+            
+        elseif contains(lower(nameSubj), 'tab') && iCell == 212 % manual fixing for Tabla's cell
+            locCandidateCells = [212 300 745];
+            tempID = [NaN 88 72 NaN NaN NaN 88 NaN NaN NaN NaN NaN];
+            
+            cellIDAcrossDay(countValidCell, :) = tempID;
+            flagDone(locCandidateCells) = 1;
+            bigStackCell(:, locCandidateCells) = NaN;
+            
+        else        
+            tempID = NaN(1, length(cellAcrossDay));
+            tempID(idMatrix(iCell, 1)) = idMatrix(iCell, 2); % filling this cell
+                        
+            cellIDAcrossDay(countValidCell, :) = tempID;
+            flagDone(iCell) = 1;
+            bigStackCell(:, iCell) = NaN;
+        end
     end
 end
 
@@ -225,16 +249,14 @@ paramAlignCells.idMatrix = idMatrix;
 paramAlignCells.flagDone = flagDone;
 
 
+
 if flagSaveFile
 %     fname_stack = fullfile(dirProjects, sprintf('0Marmoset/Ca/tempData/%s_FOV%d_stackedCenter.mat', nameSubj, FOV_ID));
     fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellAcrossDay.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
     save(fname_stack, 'cellAcrossDay', 'paramAlignCells', 'cellIDAcrossDay')
-    fprintf(1, '\n Saving files for %s FOV %d: in total %d/%d cells aligned \n', nameSubj, FOV_ID, countSuperCell, length(flagDone))
+    fprintf(1, '\n Saving files for %s FOV %d: in total %d/%d cells aligned \n', nameSubj, FOV_ID, countValidCell, length(flagDone))
 end
-
-
-
-    
+  
     
     
 

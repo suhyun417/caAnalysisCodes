@@ -50,7 +50,7 @@ nSession = length(setDateSession);
 
 
 %% load saved files
-% cell-center info pooled across days
+% cells pooled across days
 fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellAcrossDay.mat',...
     nameSubj, FOV_ID, nameSubj, FOV_ID)); 
 load(fname_stack, 'cellIDAcrossDay'); %, 'stackCellCenter')
@@ -64,9 +64,41 @@ load(fname_cellQC, 'infoCells')
 fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_shifts.mat',...
     nameSubj, FOV_ID, nameSubj, FOV_ID));  
 load(fname_shifts, 'shifts')
-    
+
+% aligned cells TS and spatial info
+fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+load(fname_caTSFOV, 'cellTS', 'cellPix')
 
 %% Stacked cells across days: playing with examples
+indCellValid = cat(1, cellTS.nTrial1_total)>8;
+
+% tempATrial = cat(2, cellPix(indCellValid).repPix);
+% tempATrial(~isnan(tempATrial)) = 10;
+tempA = cat(2, cellPix.repPix);
+tempA(~isnan(tempA)) = 1;
+tempA(:, indCellValid) = tempA(:, indCellValid).*10;
+
+imgCells = sum(tempA, 2, 'omitnan');
+imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
+
+figure;
+imagesc(imgCells_2d)
+
+% A_temp = full(reshape(neuron.A(:,i),d1,d2));
+
+figure;
+cmap_cell = colormap(hsv(length(cellPix)));
+for iCell = 1:length(cellPix)
+    plot(cellPix(iCell).contourCell{1}(1,1:end), cellPix(iCell).contourCell{1}(2,1:end), ...
+        'Color', cmap_cell(iCell, :), 'linewidth', 1); hold on;
+    text(cellPix(iCell).contourCell{1}(1,end), cellPix(iCell).contourCell{1}(2,end), num2str(iCell), ...
+        'color', 'k')
+end
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 size(infoCells(1).imgFOV, 2)+20], 'YLim', [0-20 size(infoCells(1).imgFOV, 1)+20])
+
+
+
+%%
 isCell = ~isnan(cellIDAcrossDay);
 temp = sum(isCell, 2);
 indCell_long = find(temp>4);
@@ -78,97 +110,97 @@ indCell_long = find(temp>4);
 % % catCell(8:14, 102:107)
 % % stackCellCenter(8:14, 102:107, :)
 
-% prep the DFL ts from all the sessions
-for iS = 1:length(setDateSession)
-    dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
-    dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-    load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
-    
-    resultsDFL(iS).tS_session = tS_session;
-end
-clear tS_session 
-
-fig_supercellmovie = figure;
-set(fig_supercellmovie, 'Position', [1500 1000 800 600], 'Color', 'w')
-
-for iC = 1:length(indCell_long)
-    
-    cellID = cellIDAcrossDay(indCell_long(iC),:);
-    
-    
-    % cellID = [86 75 96 69 55 61 63 nan]; %[6 10 13 10 12 8 6 nan]; %[109 93 113 nan nan 76 74 nan]; %[91 81 104 75 nan 64 nan nan]; %[69 53 68 nan 35 nan nan nan]; %[21 12 21 18 nan 12 12 16]; %[48 33 45 34 nan 32 33 32]; %[34 20 32 nan nan 28 23 25]; %[118 nan 28 nan nan 17 17 nan]; %[83 68 92 61 48 55 58 50]; %from Max FOV3
-    % nameSubj = 'Max'; %'Tabla';
-    % FOV_ID = 3; %1;
-    % [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
-    %
-    % [c, ia, indRun] = unique(infoSession.(1), 'sorted');
-    % setDateSession = c(2:end); % 1st one is always empty
-    % nSession = length(setDateSession);
-    
-    tempMatTS1 = []; tempMatTS2 = []; nTrial = [];
-    for iS = 1:length(cellID)
-        
-        if isnan(cellID(iS))
-            continue;
-        end
-        
-        %     dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
-        %     % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
-        %
-        %     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-        %
-        %     load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
-        
-        %     figure(200);
-        %     subplot(2,1,1)
-        %     title('Mov 1')
-        %     plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
-        %     hold on
-        
-        tempMatTS1 = cat(1, tempMatTS1, squeeze(resultsDFL(iS).tS_session(1).matTS_norm(:, cellID(iS), :))');
-        nTrial = cat(1, nTrial, size(tempMatTS1, 1));
-        
-        %     subplot(2,1,2)
-        %     title('Mov 2')
-        %     plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
-        %     hold on
-        
-        tempMatTS2 = cat(1, tempMatTS2, squeeze(resultsDFL(iS).tS_session(2).matTS_norm(:, cellID(iS), :))');
-    end
-    
-    tempValidS = ~isnan(cellID);
-    
-    figure(fig_supercellmovie);
-    set(gcf, 'color', 'w')
-    subplot(2,1,1)
-    imagesc(tempMatTS1);
-    set(gca, 'XTickLabel', 20:20:120, 'YTick', nTrial, 'YTickLabel', setDateSession(tempValidS),'TickDir', 'out', 'Box', 'off')
-    title(sprintf('Cell %d/%d: Mov 1', iC, length(indCell_long)))
-    colormap(hot)
-    subplot(2,1,2)
-    imagesc(tempMatTS2);
-    set(gca, 'XTickLabel', 20:20:120, 'YTick', nTrial, 'YTickLabel', setDateSession(tempValidS),'TickDir', 'out', 'Box', 'off')
-    title('Mov 2')
-    xlabel('Time (s)')
-    colormap(hot)
-    
-%     figure(200);
+% % prep the DFL ts from all the sessions
+% for iS = 1:length(setDateSession)
+%     dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+%     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+%     load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
+%     
+%     resultsDFL(iS).tS_session = tS_session;
+% end
+% clear tS_session 
+% 
+% fig_supercellmovie = figure;
+% set(fig_supercellmovie, 'Position', [1500 1000 800 600], 'Color', 'w')
+% 
+% for iC = 1:length(indCell_long)
+%     
+%     cellID = cellIDAcrossDay(indCell_long(iC),:);
+%     
+%     
+%     % cellID = [86 75 96 69 55 61 63 nan]; %[6 10 13 10 12 8 6 nan]; %[109 93 113 nan nan 76 74 nan]; %[91 81 104 75 nan 64 nan nan]; %[69 53 68 nan 35 nan nan nan]; %[21 12 21 18 nan 12 12 16]; %[48 33 45 34 nan 32 33 32]; %[34 20 32 nan nan 28 23 25]; %[118 nan 28 nan nan 17 17 nan]; %[83 68 92 61 48 55 58 50]; %from Max FOV3
+%     % nameSubj = 'Max'; %'Tabla';
+%     % FOV_ID = 3; %1;
+%     % [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
+%     %
+%     % [c, ia, indRun] = unique(infoSession.(1), 'sorted');
+%     % setDateSession = c(2:end); % 1st one is always empty
+%     % nSession = length(setDateSession);
+%     
+%     tempMatTS1 = []; tempMatTS2 = []; nTrial = [];
+%     for iS = 1:length(cellID)
+%         
+%         if isnan(cellID(iS))
+%             continue;
+%         end
+%         
+%         %     dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+%         %     % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
+%         %
+%         %     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+%         %
+%         %     load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
+%         
+%         %     figure(200);
+%         %     subplot(2,1,1)
+%         %     title('Mov 1')
+%         %     plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
+%         %     hold on
+%         
+%         tempMatTS1 = cat(1, tempMatTS1, squeeze(resultsDFL(iS).tS_session(1).matTS_norm(:, cellID(iS), :))');
+%         nTrial = cat(1, nTrial, size(tempMatTS1, 1));
+%         
+%         %     subplot(2,1,2)
+%         %     title('Mov 2')
+%         %     plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
+%         %     hold on
+%         
+%         tempMatTS2 = cat(1, tempMatTS2, squeeze(resultsDFL(iS).tS_session(2).matTS_norm(:, cellID(iS), :))');
+%     end
+%     
+%     tempValidS = ~isnan(cellID);
+%     
+%     figure(fig_supercellmovie);
 %     set(gcf, 'color', 'w')
 %     subplot(2,1,1)
-%     plot(tempMatTS1'); axis tight
-%     set(gca, 'XTickLabel', 20:20:120, 'TickDir', 'out', 'Box', 'off')
-%     title(sprintf('Cell %d/%d: Mov 1', iC, length(indCell_long)))
-% %     colormap(hot)
+%     imagesc(tempMatTS1);
+%     set(gca, 'XTickLabel', 20:20:120, 'YTick', nTrial, 'YTickLabel', setDateSession(tempValidS),'TickDir', 'out', 'Box', 'off')
+% %     title(sprintf('Cell %d/%d: Mov 1', iC, length(indCell_long)))
+%     colormap(hot)
 %     subplot(2,1,2)
-%     plot(tempMatTS2'); axis tight
-%     set(gca, 'XTickLabel', 20:20:120, 'TickDir', 'out', 'Box', 'off')
+%     imagesc(tempMatTS2);
+%     set(gca, 'XTickLabel', 20:20:120, 'YTick', nTrial, 'YTickLabel', setDateSession(tempValidS),'TickDir', 'out', 'Box', 'off')
 %     title('Mov 2')
 %     xlabel('Time (s)')
-% %     colormap(hot)
-    
-    input('')
-    
-end
+%     colormap(hot)
+%     
+% %     figure(200);
+% %     set(gcf, 'color', 'w')
+% %     subplot(2,1,1)
+% %     plot(tempMatTS1'); axis tight
+% %     set(gca, 'XTickLabel', 20:20:120, 'TickDir', 'out', 'Box', 'off')
+% %     title(sprintf('Cell %d/%d: Mov 1', iC, length(indCell_long)))
+% % %     colormap(hot)
+% %     subplot(2,1,2)
+% %     plot(tempMatTS2'); axis tight
+% %     set(gca, 'XTickLabel', 20:20:120, 'TickDir', 'out', 'Box', 'off')
+% %     title('Mov 2')
+% %     xlabel('Time (s)')
+% % %     colormap(hot)
+%     
+%     input('')
+%     
+% end
 
 
 %% Visualization of cell contours across days
