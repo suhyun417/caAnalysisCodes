@@ -82,11 +82,14 @@ imgCells = sum(tempA, 2, 'omitnan');
 imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
 
 figure;
+set(gcf, 'Color', 'w')
 imagesc(imgCells_2d)
+colormap(turbo)
 
 % A_temp = full(reshape(neuron.A(:,i),d1,d2));
 
 figure;
+set(gcf, 'Color', 'w')
 cmap_cell = colormap(hsv(length(cellPix)));
 for iCell = 1:length(cellPix)
     plot(cellPix(iCell).contourCell{1}(1,1:end), cellPix(iCell).contourCell{1}(2,1:end), ...
@@ -102,6 +105,49 @@ set(gca, 'YDir', 'reverse', 'XLim', [0-20 size(infoCells(1).imgFOV, 2)+20], 'YLi
 isCell = ~isnan(cellIDAcrossDay);
 temp = sum(isCell, 2);
 indCell_long = find(temp>4);
+
+
+%% plot
+fig_supercellmovie = figure;
+set(fig_supercellmovie, 'Position', [1500 1000 1200 400], 'Color', 'w')
+sp(1) = subplot('Position', [0.05 0.25 0.3 0.6]);
+sp(2) = subplot('Position', [0.4 0.55 0.55 0.35]);
+sp(3) = subplot('Position', [0.4 0.05 0.55 0.35]);
+
+for iC = 1:length(indCellValid)
+    
+    iCell = indCellValid(iC); %70;
+    
+    figure(fig_supercellmovie);
+    axes(sp(1)); cla;
+    A_temp = cellPix(iCell).repPix./max(cellPix(iCell).repPix);
+    contourf(reshape(A_temp,d1,d2), [0,0]+1); hold on;
+    text(cellPix(iCell).contourCell{1}(1,end), cellPix(iCell).contourCell{1}(2,end),...
+        num2str(iCell), 'Color', 'k')
+        
+    
+    axes(sp(2));
+    imagesc(cellTS(iCell).matTS_movie1);
+    %     set(gca, 'XTickLabel', 20:20:120, 'YTick', cellTS(iCell).nTrial1_set , 'YTickLabel', setDateSession(cellTS(iCell).idAcrossSession(:,1)),'TickDir', 'out', 'Box', 'off')
+    title(sprintf('Cell %d/%d: Mov 1', iCell, length(cellTS)))
+    %     colormap(hot)
+    
+    axes(sp(3));
+    imagesc(cellTS(iCell).matTS_movie2);
+    %     set(gca, 'XTickLabel', 20:20:120, 'YTick', cellTS(iCell).nTrial2_set, 'YTickLabel', setDateSession(cellTS(iCell).idAcrossSession(:,1)),'TickDir', 'out', 'Box', 'off')
+    title('Mov 2')
+    xlabel('Time (s)')
+    %     colormap(hot)
+    
+    set(sp(1), 'YDir', 'reverse', 'XLim', [0-20 size(infoCells(1).imgFOV, 2)+20], 'YLim', [0-20 size(infoCells(1).imgFOV, 1)+20])
+    colormap(sp(1), 'gray')
+    set(sp(2:3), 'TickDir', 'out', 'XTickLabel', 20:20:120)
+    colormap(sp(2), 'hot')
+    colormap(sp(3), 'hot')
+
+
+    input('')
+end
 
 % isCell = ~isnan(stackCellCenter);
 % catCell = sum(isCell, 3);
@@ -203,90 +249,90 @@ indCell_long = find(temp>4);
 % end
 
 
-%% Visualization of cell contours across days
-cellColor = hsv(nSession);
-% cellColor = [166,206,227;...
-% 31,120,180;...
-% 178,223,138;...
-% 51,160,44;...
-% 251,154,153;...
-% 227,26,28;...
-% 253,191,111;...
-% 255,127,0;...
-% 202,178,214;...
-% 106,61,154;...
-% 255,255,153;...
-% 177,89,40]./255; 
-fig_acSession = figure;
-set(fig_acSession, 'Color', 'w')
-
-for iSession = 1:nSession
-% iSession = 1; 
-dateSession = setDateSession{iSession}; %'20191113'; %setDateSession{iSession};
-
-dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-dirPreproc = fullfile(dirProcdata_session, '_preproc');
-
-
-%%
-addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
-cnmfe_setup;
-d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
-
-load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
-
-validIndCell = [];
-validIndCell(:,1) = 1:length(neuron.ids);
-if strcmpi(nameSubj, 'max')
-    load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
-    validIndCell = indCell.validCell;
-end
-
-% % % sort the cells based on PNR
-% % [a, sortedIndCell] = sort(infoCells(iSession).pnrs, 'descend');
-% [sortedIndCell] = orderROIs(neuron, 'circularity');
-
-% color cells to indicate sessions
-
-thr = 0.3;
-widthContour = 1.5;
-Coor = neuron.get_contours(thr); 
-infoCells(iSession).coor_0p3 = Coor;
-
-figure(fig_acSession);
-for i = 1:size(Coor, 1)
-    %         cont = medfilt1(Coor{i}')';
-    cont = Coor{i};
-    if size(cont,2) > 1 % "shifts" values are in the order of image matrix dimensions: first dimension is vertical ("y") and second dimension is horizontal ("x")
-        plot(cont(1,1:end)+shifts(iSession, 2), cont(2,1:end)+shifts(iSession, 1), 'Color', cellColor(iSession, :), 'linewidth', widthContour); hold on;
-    end
-end
-end
-axis tight
-
-for thr = [0.2:0.1:0.5]
-    locbad=[]; nrows=[]; ncols=[];
-Coor = neuron.get_contours(thr); 
-[nrows, ncols] = cellfun(@size, Coor);
-locbad = find(ncols<2); % the ones that get_contours couldn't get a reasonable localized contour at this threshold
-length(locbad)
-end
-
-figure;
-for iC = 1:length(locbad)    
-    i = locbad(iC);
-    A_temp = full(reshape(neuron.A(:,i),d1,d2));
-    A_temp = medfilt2(A_temp,[3,3]);
-    A_temp = A_temp(:);
-    [temp,ind] = sort(A_temp(:).^2,'ascend');
-    temp =  cumsum(temp);
-    ff = find(temp > (1-thr)*temp(end),1,'first');
-    if ~isempty(ff)
-        CC{i} = contour(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor', 'b'); hold on;
-    end
-    set(gca, 'YDir', 'reverse', 'XLim', [0 d2], 'YLim', [0 d1])
-    input('')
-end
+% %% Visualization of cell contours across days
+% cellColor = hsv(nSession);
+% % cellColor = [166,206,227;...
+% % 31,120,180;...
+% % 178,223,138;...
+% % 51,160,44;...
+% % 251,154,153;...
+% % 227,26,28;...
+% % 253,191,111;...
+% % 255,127,0;...
+% % 202,178,214;...
+% % 106,61,154;...
+% % 255,255,153;...
+% % 177,89,40]./255; 
+% fig_acSession = figure;
+% set(fig_acSession, 'Color', 'w')
+% 
+% for iSession = 1:nSession
+% % iSession = 1; 
+% dateSession = setDateSession{iSession}; %'20191113'; %setDateSession{iSession};
+% 
+% dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+% dirPreproc = fullfile(dirProcdata_session, '_preproc');
+% 
+% 
+% %%
+% addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
+% cnmfe_setup;
+% d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
+% 
+% load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
+% 
+% validIndCell = [];
+% validIndCell(:,1) = 1:length(neuron.ids);
+% if strcmpi(nameSubj, 'max')
+%     load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
+%     validIndCell = indCell.validCell;
+% end
+% 
+% % % % sort the cells based on PNR
+% % % [a, sortedIndCell] = sort(infoCells(iSession).pnrs, 'descend');
+% % [sortedIndCell] = orderROIs(neuron, 'circularity');
+% 
+% % color cells to indicate sessions
+% 
+% thr = 0.3;
+% widthContour = 1.5;
+% Coor = neuron.get_contours(thr); 
+% infoCells(iSession).coor_0p3 = Coor;
+% 
+% figure(fig_acSession);
+% for i = 1:size(Coor, 1)
+%     %         cont = medfilt1(Coor{i}')';
+%     cont = Coor{i};
+%     if size(cont,2) > 1 % "shifts" values are in the order of image matrix dimensions: first dimension is vertical ("y") and second dimension is horizontal ("x")
+%         plot(cont(1,1:end)+shifts(iSession, 2), cont(2,1:end)+shifts(iSession, 1), 'Color', cellColor(iSession, :), 'linewidth', widthContour); hold on;
+%     end
+% end
+% end
+% axis tight
+% 
+% for thr = [0.2:0.1:0.5]
+%     locbad=[]; nrows=[]; ncols=[];
+% Coor = neuron.get_contours(thr); 
+% [nrows, ncols] = cellfun(@size, Coor);
+% locbad = find(ncols<2); % the ones that get_contours couldn't get a reasonable localized contour at this threshold
+% length(locbad)
+% end
+% 
+% figure;
+% for iC = 1:length(locbad)    
+%     i = locbad(iC);
+%     A_temp = full(reshape(neuron.A(:,i),d1,d2));
+%     A_temp = medfilt2(A_temp,[3,3]);
+%     A_temp = A_temp(:);
+%     [temp,ind] = sort(A_temp(:).^2,'ascend');
+%     temp =  cumsum(temp);
+%     ff = find(temp > (1-thr)*temp(end),1,'first');
+%     if ~isempty(ff)
+%         CC{i} = contour(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor', 'b'); hold on;
+%     end
+%     set(gca, 'YDir', 'reverse', 'XLim', [0 d2], 'YLim', [0 d1])
+%     input('')
+% end
 
 %% order_ROIs
 function [srt] = orderROIs(obj, srt)
@@ -451,157 +497,6 @@ text(center(:,2)+1, center(:,1), num2str([1:length(neuron.ids)]'), 'Color', 'w')
 
 
 
-% %% playing
-% for i = 1:length(infoCells)
-%     indlow10 = [];
-%     indlow10 = find(infoCells(i).pnrs<10);
-%     
-%     [sortpnrs, indsort] = sort(infoCells(i).pnrs, 'descend');
-%     indtop10 = indsort(1:10);
-%     
-%     figure(100)
-%     plot(infoCells(i).cellCenter(indtop10,2), infoCells(i).cellCenter(indtop10, 1), '.', 'MarkerSize', 15);
-%     set(gca, 'YDir', 'reverse')
-%     hold on;
-%     input('')
-% end
-
-% %% plot movie tseries of potential same cell
-% cellID = [22 16 14 17 19 18 nan nan nan 5 9 24]; % from Tabla FOV1
-% nameSubj = 'Tabla'; %'Max'; %'Tabla';
-% FOV_ID = 1; %3; %1;
-% [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
-% 
-% [c, ia, indRun] = unique(infoSession.(1), 'sorted');
-% setDateSession = c(2:end); % 1st one is always empty
-% nSession = length(setDateSession);
-% tempMatTS1 = []; tempMatTS2 = [];
-% for iS = 1:length(cellID)
-%     
-%     if isnan(cellID(iS))
-%         continue;
-%     end
-%         
-%     dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
-%     % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
-%     
-%     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-%     
-%     load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
-%     
-%     figure(200);
-%     subplot(2,1,1)
-%     title('Mov 1')
-%     plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
-%     hold on
-%     
-%     tempMatTS1 = cat(1, tempMatTS1, squeeze(tS_session(1).matTS_norm(:, cellID(iS), :))');
-%     
-%     subplot(2,1,2)
-%     title('Mov 2')
-%     plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
-%     hold on
-%     
-%     tempMatTS2 = cat(1, tempMatTS2, squeeze(tS_session(2).matTS_norm(:, cellID(iS), :))');
-% end
-    
-
-for iSession = 2:nSession
-    % Load session image to align to the reference image
-    dateSession = setDateSession{iSession};
-    dirSessionImage = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/_preproc',...
-    nameSubj, dateSession));
-    imgSession = loadtiff(fullfile(dirSessionImage, 'mc_template.tif'));
- 
-%     paramHPF.gSig = 7;
-%     paramHPF.gSiz = 17;
-    paramRegister.bound = 0; %40;
-%     paramHPF.imfilter = 'imfilter(Yf,psf,''symmetric'')';
-    
-%     Yf = loadtiff(fname);
-    [d1,d2,T] = size(imgSession);
-    
-    bound = paramRegister.bound; %40; %0;
-        
-    % set options
-%     [p, nameIn, ext] = fileparts(fname);
-    clear options_r
-    options_r = NoRMCorreSetParms('d1',d1-bound,'d2',d2-bound,'max_shift',20,'iter',1,'correct_bidir',false, ...
-        'output_type', 'mat'); %'tif', 'tiff_filename', './registrationTest_rgm.tif');%,'bin_width',T, ...
-    paramMC.options_r = options_r;
-    
-    % register using the high pass filtered data and apply shifts to original data
-    tic; [M1,shifts1,template1] = normcorre(imgSession(bound/2+1:end-bound/2,bound/2+1:end-bound/2),options_r, imgRef); toc % register filtered data
-    %      [M_final,shifts,template,options,col_shift] = normcorre(Y,options,template);
-    % apply shifts and save it as desired format described in the options
-%     tic; Mrg = apply_shifts(imgSession,shifts1,options_r,bound/2,bound/2); toc    
-
-% % Check the registration
-% figure;
-% subplot(1, 2, 1);
-% imshowpair(imgRef, imgSession);
-% title('Before Registration')
-% subplot(1, 2, 2);
-% imshowpair(imgRef, Mrg);
-% title('Rigid Motion Regiration')
-% % subplot(1, 3, 3);
-% % imshowpair(imgRef, Mnrg);
-% % title('Non-rigid motion Registration')
-
-        %% Apply shifts directly to neuron.A: yes you can just add the shifts
-        addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
-        cnmfe_setup;
-        
-%         % REF IMAGE
-%         d_sources2D_ref = dir(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/Sources2D_all*',...
-%             nameSubj, setDateSession{1})));
-%         load(fullfile(d_sources2D_ref(1).folder, d_sources2D_ref(1).name));  
-% %         tName = ls(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/Sources2D_all*',...
-% %             nameSubj, setDateSession{1}))); % because "dir" doesn't work 
-% %         load(strtrim(tName));
-%         imgFOV_ref = neuron.Cn.*neuron.PNR;
-%         [center_ref] = neuron.estCenter();
-                
-        % SESSION IMAGE
-        clear neuron
-        dirProcdata_session = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/',...
-            nameSubj, dateSession));
-        d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));        
-        load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
-%         tName_ses = ls(fullfile(dirProcdata_session, 'Sources2D_all*'));
-%         load(strtrim(tName_ses))
-        imgFOV_ses = neuron.Cn.*neuron.PNR;
-        imgFOV_ses_reg = apply_shifts(imgFOV_ses, shifts1,options_r,bound/2,bound/2);
-        
-%         figure
-%         subplot(1,2,1);
-%         imshowpair(imgFOV_ref, imgFOV_ses)
-%         title('Before Registration')
-%         subplot(1,2,2);
-%         imshowpair(imgFOV_ref, imgFOV_ses_reg)
-%         title('After Registration')
-
-        [center_ses] = neuron.estCenter();
-        shifts = squeeze(shifts1.shifts);
-        center_ses_reg = center_ses + shifts';
-        
-
-%         figure
-%         sp(1) = subplot(1,2,1);
-%         plot(center_ref(:,2), center_ref(:, 1), 'r.')
-%         hold on
-%         plot(center_ses(:,2), center_ses(:, 1), 'b.')
-%         sp(2) = subplot(1,2,2);
-%         plot(center_ref(:,2), center_ref(:, 1), 'r.')
-%         hold on
-%         plot(center_ses_reg(:,2), center_ses_reg(:, 1), 'g.')
-%         set(sp, 'YDir', 'reverse')
-%         [d1,d2] = size(neuron.Cn);
-%         set(sp, 'XLim', [0 d2], 'YLim', [0 d1])
-%         title(sp(1), 'Cell center: before registration')
-%         title(sp(2), 'Cell center: after registration')
-
-end
 
 %% Possible code
 % 1. Function performing longitudinal registration
@@ -671,171 +566,5 @@ end
 %         end
 
 
-%% Contour visualization
-thr = 0.5; % the lower the smaller (more centralized) the contour
-cellColor = [1 1 1];
-widthContour = 1;
-[d1,d2] = size(neuron.Cn);
 
-figure;
-imagesc(zeros(d1, d2)); % background
-colormap(gray);
-caxis([0 0.1]);
-hold on;
 
-CC = cell(size(neuron.A, 2),1);
-CR = cell(size(neuron.A, 2),2);
-for i = 1:size(neuron.A ,2)
-    A_temp = full(reshape(neuron.A(:,i),d1,d2));
-    A_temp = medfilt2(A_temp,[3,3]);
-    A_temp = A_temp(:);
-    [temp,ind] = sort(A_temp(:).^2,'ascend');
-    temp =  cumsum(temp);
-    ff = find(temp > (1-thr)*temp(end),1,'first');
-    if ~isempty(ff)
-        CC{i} = contourf(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor',cellColor, 'linewidth', widthContour);
-        fp = find(A_temp >= A_temp(ind(ff)));
-        [ii,jj] = ind2sub([d1,d2],fp);
-        CR{i,1} = [ii,jj]';
-        CR{i,2} = A_temp(fp)';
-    end
-    hold on;
-end
-axis off
-title(sprintf('%s: %s', nameSubj, dateSession))
-
-%     [cY,mY,vY] = motion_metrics(YY(bound/2+1:end-bound/2,bound/2+1:end-bound/2,:),options_r.max_shift);
-%     [cYf,mYf,vYf] = motion_metrics(Yf,options_r.max_shift);
-%     [cM1,mM1,vM1] = motion_metrics(M1,options_r.max_shift);
-    
-%     paramHPF.gSig = 7;
-%     paramHPF.gSiz = 17;
-%     paramHPF.bound = 40;
-%     paramHPF.imfilter = 'imfilter(Yf,psf,''symmetric'')';
-    
-%     Yf = loadtiff(fname);
-%     [d1,d2,T] = size(Yf);
-%     
-%     % perform some sort of deblurring/high pass filtering
-%     gSig = paramHPF.gSig; % 7;
-%     gSiz = paramHPF.gSiz; % 17;
-%     psf = fspecial('gaussian', round(2*gSiz), gSig);
-%     ind_nonzero = (psf(:)>=max(psf(:,1)));
-%     psf = psf-mean(psf(ind_nonzero));
-%     psf(~ind_nonzero) = 0;   % only use pixels within the center disk
-%     %Y = imfilter(Yf,psf,'same');
-%     %bound = 2*ceil(gSiz/2);
-%     YY = imfilter(Yf,psf,'symmetric');
-%     bound = paramHPF.bound; %40; %0;
-%     YY = YY(bound/2+1:end-bound/2,bound/2+1:end-bound/2,:);
-%     
-%     clear Yf
-%     
-%     % set options
-%     [p, nameIn, ext] = fileparts(fname);
-%     options_r = NoRMCorreSetParms('d1',d1-bound,'d2',d2-bound,'bin_width',200,'max_shift',20,'iter',1,'correct_bidir',false); %, ...
-%     %sprintf('_mc_bound%d.tif', bound)]));
-%     
-%     % read initial batch and compute template
-%     init_batch = options_r.init_batch; %100;
-%     add_value = options_r.add_value; %0;
-%     us_fac = options_r.us_fac;
-%     max_shift = options_r.max_shift;
-%     
-%     interval = ceil(T/2-init_batch/2+1):floor(T/2+init_batch/2);
-%     sizY = size(YY);
-%     T = sizY(end);
-%     nd = length(sizY)-1; % determine whether imaging is 2d or 3d
-%     sizY = sizY(1:nd);
-%     
-%     Y_temp = YY(:,:,interval);
-%     data_type = class(Y_temp);
-%     Y_temp = single(Y_temp);
-%     
-%     fprintf('Registering the first %i frames just to obtain a good template....',init_batch);
-%     template = median(Y_temp,nd+1)+add_value;
-%     fftTemp = fftn(template);
-%     for t = 1:size(Y_temp,nd+1)
-%         [~,Greg] = dftregistration_min_max(fftTemp,fftn(Y_temp(:,:,t)), us_fac, -max_shift, max_shift, options_r.phase_flag);
-%         M_temp = real(ifftn(Greg));
-%         template = template*(t-1)/t + M_temp/t;
-%     end
-%     template = template + add_value;
-%     fprintf('..done. \n');
-                
-
-    %% now apply non-rigid motion correction
-    % non-rigid motion correction is likely to produce very similar results
-    % since there is no raster scanning effect in wide field imaging
-    
-    options_nr = NoRMCorreSetParms('d1',d1-bound,'d2',d2-bound,'bin_width',50, ...
-        'grid_size',[128,128]*2,'mot_uf',4,'correct_bidir',false, ...
-        'overlap_pre',32,'overlap_post',32,'max_shift',20);
-    
-    tic; [M2,shifts2,template2] = normcorre_batch(Y(bound/2+1:end-bound/2,bound/2+1:end-bound/2,:),options_nr,template1); toc % register filtered data
-    tic; Mpr = apply_shifts(Yf,shifts2,options_nr,bound/2,bound/2); toc % apply the shifts to the removed percentile
-
-    
-    %%
-    imgRef = loadtiff(fullfile(dirProcData_session_preproc, 'mc_template.tif'));
-    
-    d = dir(fullfile(dirProcData_session_preproc, [nameRun, '*_bpf.tif'])); % use bandpass filtered data
-    fname = fullfile(dirProcData_session_preproc, d.name);
-    
-    paramHPF.gSig = 7;
-    paramHPF.gSiz = 17;
-    paramHPF.bound = 40;
-    paramHPF.imfilter = 'imfilter(Yf,psf,''symmetric'')';
-    
-    Yf = loadtiff(fname);
-    [d1,d2,T] = size(Yf);
-    
-    % perform some sort of deblurring/high pass filtering
-    gSig = paramHPF.gSig; % 7;
-    gSiz = paramHPF.gSiz; % 17;
-    psf = fspecial('gaussian', round(2*gSiz), gSig);
-    ind_nonzero = (psf(:)>=max(psf(:,1)));
-    psf = psf-mean(psf(ind_nonzero));
-    psf(~ind_nonzero) = 0;   % only use pixels within the center disk
-    %Y = imfilter(Yf,psf,'same');
-    %bound = 2*ceil(gSiz/2);
-    YY = imfilter(Yf,psf,'symmetric');
-    bound = paramHPF.bound; %40; %0;
-    
-    % set options
-    [p, nameIn, ext] = fileparts(fname);
-    clear options_r
-    options_r = NoRMCorreSetParms('d1',d1-bound,'d2',d2-bound,'bin_width',T,'max_shift',20,'iter',1,'correct_bidir',false); %, ...
-    paramMC.options_r = options_r;
-    
-    % register using the high pass filtered data and apply shifts to original data
-    tic; [M1,shifts1,template1] = normcorre_batch(YY(bound/2+1:end-bound/2,bound/2+1:end-bound/2,:),options_r, imgRef); toc % register filtered data
-    
-    % apply shifts to full dataset and save it as tif
-    options_r = NoRMCorreSetParms('d1',d1-bound,'d2',d2-bound, 'output_type', 'tif', 'tiff_filename', fullfile(dirProcData_session_preproc, [nameIn '_mc.tif']));
-    tic; Mr = apply_shifts(Yf,shifts1,options_r,bound/2,bound/2); toc
-    
-    paramMC.paramHPF = paramHPF;
-    
-    [cY,mY,vY] = motion_metrics(YY(bound/2+1:end-bound/2,bound/2+1:end-bound/2,:),options_r.max_shift);
-    [cYf,mYf,vYf] = motion_metrics(Yf,options_r.max_shift);
-    [cM1,mM1,vM1] = motion_metrics(M1,options_r.max_shift);
-
-    %
-    %% plot rigid shifts and metrics
-    shifts_r = squeeze(cat(3,shifts1(:).shifts));
-    fig_rigid = figure(100);
-    subplot(211); plot(shifts_r);
-    title('Rigid shifts','fontsize',14,'fontweight','bold');
-    legend('y-shifts','x-shifts');
-    subplot(212); plot(1:T,cY,1:T,cM1);
-    title('Correlation coefficients on filtered movie','fontsize',14,'fontweight','bold');
-    legend('raw','rigid');
-    %             subplot(313); plot(1:T,cYf,1:T,cM1f);
-    %             title('Correlation coefficients on full movie','fontsize',14,'fontweight','bold');
-    %             legend('raw','rigid');
-    
-    print(fig_rigid, fullfile(dirProcData_session_preproc, [nameIn '_mc']), '-depsc')
-    
-    clear Y* M*
-    save(fullfile(dirProcData_session_preproc, 'paramPreproc.mat'), 'param*')

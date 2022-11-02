@@ -35,11 +35,12 @@ addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 
 dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
+flagSaveFile = 0; %1;
 
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1;
+iSubj = 1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -111,32 +112,6 @@ for iCell = 1:size(cellIDAcrossDay, 1)
     cellPix(iCell).contourCell = contourCell;
 end
 
-%% 
-indCellValid = cat(1, cellTS.nTrial1_total)>8;
-
-% tempATrial = cat(2, cellPix(indCellValid).repPix);
-% tempATrial(~isnan(tempATrial)) = 10;
-tempA = cat(2, cellPix.repPix);
-tempA(~isnan(tempA)) = 1;
-tempA(:, indCellValid) = tempA(:, indCellValid).*10;
-
-imgCells = sum(tempA, 2, 'omitnan');
-imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
-
-figure;
-imagesc(imgCells_2d)
-
-% A_temp = full(reshape(neuron.A(:,i),d1,d2));
-
-figure;
-cmap_cell = colormap(hsv(length(cellPix)));
-for iCell = 1:length(cellPix)
-    plot(cellPix(iCell).contourCell{1}(1,1:end), cellPix(iCell).contourCell{1}(2,1:end), ...
-        'Color', cmap_cell(iCell, :), 'linewidth', 1); hold on;
-    text(cellPix(iCell).contourCell{1}(1,end), cellPix(iCell).contourCell{1}(2,end), num2str(iCell), ...
-        'color', 'k')
-end
-set(gca, 'YDir', 'reverse', 'XLim', [0-20 size(infoCells(1).imgFOV, 2)+20], 'YLim', [0-20 size(infoCells(1).imgFOV, 1)+20])
 
 %%
 if flagSaveFile
@@ -145,32 +120,91 @@ if flagSaveFile
     fprintf(1, '\n Saving files for %s FOV %d: in total %d/%d cells aligned \n', nameSubj, FOV_ID, countValidCell, length(flagDone))
 end
 
+%% Plot1 
+% indCellValid = find(cat(1, cellTS.nTrial1_total)>8);
+% 
+% % tempATrial = cat(2, cellPix(indCellValid).repPix);
+% % tempATrial(~isnan(tempATrial)) = 10;
+% tempA = cat(2, cellPix.repPix);
+% tempA(~isnan(tempA)) = 1;
+% tempA(:, indCellValid) = tempA(:, indCellValid).*10;
+% 
+% imgCells = sum(tempA, 2, 'omitnan');
+% imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
+% 
+% figure;
+% imagesc(imgCells_2d)
+% 
+% % A_temp = full(reshape(neuron.A(:,i),d1,d2));
+% 
+% [d1 d2] = size(infoCells(1).imgFOV);
+% 
+% figure;
+% cmap_cell = colormap(hsv(length(cellPix)));
+% for iCell = 1:length(cellPix)
+%     plot(cellPix(iCell).contourCell{1}(1,1:end), cellPix(iCell).contourCell{1}(2,1:end), ...
+%         'Color', cmap_cell(iCell, :), 'linewidth', 1); hold on;
+%     if ismember(iCell, indCellValid)
+% %         thr = 0.3;
+%         A_temp = cellPix(iCell).repPix./max(cellPix(iCell).repPix);
+% %         A_temp = A_temp(:);
+% %         [temp,ind] = sort(A_temp,'ascend');
+% %         temp =  cumsum(temp);
+% %         ff = find(temp > (1-thr)*temp(end),1,'first');
+% %         if ~isempty(ff)
+%           contourf(reshape(A_temp,d1,d2), [0,0]+1); hold on;
+% %         end
+%     end
+%         
+%     text(cellPix(iCell).contourCell{1}(1,end), cellPix(iCell).contourCell{1}(2,end), num2str(iCell), ...
+%         'color', 'k')
+% end
+% set(gca, 'YDir', 'reverse', 'XLim', [0-20 size(infoCells(1).imgFOV, 2)+20], 'YLim', [0-20 size(infoCells(1).imgFOV, 1)+20])
 
 
-
-%% plot
-fig_supercellmovie = figure;
-set(fig_supercellmovie, 'Position', [1500 1000 800 600], 'Color', 'w')
-for iCell = 1:length(cellTS)
-    
-    figure(fig_supercellmovie);
-    set(gcf, 'color', 'w')
-    subplot(2,1,1)
-    imagesc(cellTS(iCell).matTS_movie1);
-    set(gca, 'XTickLabel', 20:20:120, 'YTick', cellTS(iCell).nTrial1_set , 'YTickLabel', setDateSession(cellTS(iCell).idAcrossSession(:,1)),'TickDir', 'out', 'Box', 'off')
-    title(sprintf('Cell %d/%d: Mov 1', iCell, length(cellTS)))
-    colormap(hot)
-    
-    subplot(2,1,2)
-    imagesc(cellTS(iCell).matTS_movie2);
-    set(gca, 'XTickLabel', 20:20:120, 'YTick', cellTS(iCell).nTrial2_set, 'YTickLabel', setDateSession(cellTS(iCell).idAcrossSession(:,1)),'TickDir', 'out', 'Box', 'off')
-    title('Mov 2')
-    xlabel('Time (s)')
-    colormap(hot)
-    
-
-    input('')
-end
+%% plot 2
+% indCellValid = find(cat(1, cellTS.nTrial1_total)>8);
+% [d1 d2] = size(infoCells(1).imgFOV);
+% fig_supercellmovie = figure;
+% set(fig_supercellmovie, 'Position', [1500 1000 1200 400], 'Color', 'w')
+% sp(1) = subplot('Position', [0.05 0.25 0.3 0.6]);
+% sp(2) = subplot('Position', [0.4 0.55 0.55 0.35]);
+% sp(3) = subplot('Position', [0.4 0.05 0.55 0.35]);
+% 
+% for iC = 1:length(indCellValid)
+%     
+%     iCell = indCellValid(iC); %70;
+%     
+%     figure(fig_supercellmovie);
+%     axes(sp(1)); cla;
+%     A_temp = cellPix(iCell).repPix./max(cellPix(iCell).repPix);
+%     contourf(reshape(A_temp,d1,d2), [0,0]+1); hold on;
+%     text(cellPix(iCell).contourCell{1}(1,end), cellPix(iCell).contourCell{1}(2,end),...
+%         num2str(iCell), 'Color', 'k')
+%         
+%     
+%     axes(sp(2));
+%     imagesc(cellTS(iCell).matTS_movie1);
+%     %     set(gca, 'XTickLabel', 20:20:120, 'YTick', cellTS(iCell).nTrial1_set , 'YTickLabel', setDateSession(cellTS(iCell).idAcrossSession(:,1)),'TickDir', 'out', 'Box', 'off')
+%     title(sprintf('Cell %d/%d: Mov 1', iCell, length(cellTS)))
+%     %     colormap(hot)
+%     
+%     axes(sp(3));
+%     imagesc(cellTS(iCell).matTS_movie2);
+%     %     set(gca, 'XTickLabel', 20:20:120, 'YTick', cellTS(iCell).nTrial2_set, 'YTickLabel', setDateSession(cellTS(iCell).idAcrossSession(:,1)),'TickDir', 'out', 'Box', 'off')
+%     title('Mov 2')
+%     xlabel('Time (s)')
+%     %     colormap(hot)
+%     
+%     set(sp(1), 'YDir', 'reverse', 'XLim', [0-20 size(infoCells(1).imgFOV, 2)+20], 'YLim', [0-20 size(infoCells(1).imgFOV, 1)+20])
+%     colormap(sp(1), 'gray')
+%     set(sp(2:3), 'TickDir', 'out', 'XTickLabel', 20:20:120)
+%     colormap(sp(2), 'hot')
+%     colormap(sp(3), 'hot')
+% 
+% 
+%     input('')
+% end
 
     
     

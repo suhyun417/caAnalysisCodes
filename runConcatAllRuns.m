@@ -4,12 +4,15 @@ clear all;
 
 %% for concatenation
 % get session info
-setNameSubj = {'Tabla', 'Max'};
+% setNameSubj = {'Tabla', 'Max'};
 
-for iSubj = 1 %1:length(setNameSubj)
+nameSubj = 'Max';
+FOV_ID = 2; %% as of 11/1/2022, Max FOV2 hasn't been analyzed with this yet
 
-    nameSubj = setNameSubj{iSubj}; %'Tabla';
-    [infoSession, opts] = readInfoSession(nameSubj);
+% for iSubj = 2 %1 %1:length(setNameSubj)
+
+%     nameSubj = setNameSubj{iSubj}; %'Tabla';
+    [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
     
     [c, ia, indRun] = unique(infoSession.(1), 'sorted');
     setDateSession = c(2:end); % 1st one is always empty
@@ -26,7 +29,7 @@ for iSubj = 1 %1:length(setNameSubj)
         
         dateSession = setDateSession{iSession}; %'20191113'; %setDateSession{iSession};
         
-        dirProcdata_session = fullfile('/procdata/parksh/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+        dirProcdata_session = fullfile('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
         dirProcdata_session_preproc = fullfile(dirProcdata_session, '_preproc');
         
         % List of runs to process: get the info from the xls file
@@ -59,4 +62,4 @@ for iSubj = 1 %1:length(setNameSubj)
         
         
     end
-end
+% end

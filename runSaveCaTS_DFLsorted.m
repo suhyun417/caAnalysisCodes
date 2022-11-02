@@ -6,13 +6,13 @@ clear all; close all;
 
 ss = pwd;
 if ~isempty(strfind(ss, 'Volume')) % if it's local
-    dirProjects = '/Volumes/PROJECTS/parksh';
-    dirProcdata = '/Volumes/PROCDATA/parksh';
+    dirProjects = '/Volumes/NIFVAULT/projects/parksh';
+    dirProcdata = '/Volumes/NIFVAULT/procdata/parksh';
     dirRawdata = '/Volumes/rawdata/parksh';
 else % on virtual machine
-    dirProjects = '/projects/parksh';
-    dirProcdata = '/procdata/parksh';
-    dirRawdata = '/rawdata/parksh';
+    dirProjects = '/nifvault/projects/parksh';
+    dirProcdata = '/nifvault/procdata/parksh';
+    dirRawdata = '/nifvault/rawdata/parksh';
 end
 
 flagSave = 1;
@@ -20,20 +20,21 @@ flagPlot = 0;
 flagSavePPTX = 0;
 
 %% directory
-setNameSubj = {'Tabla', 'Max'};
+setSubj = {'Tabla', 1; 'Max', 3};
 
-for iSubj = 1 %:length(setNameSubj)
+for iSubj = 1:length(setSubj)
     
-    nameSubj = setNameSubj{iSubj}; %'Tabla'; %'Max';
+    nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+    FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
     
     % get session info
-    [infoSession, opts] = readInfoSession(nameSubj);
+    [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
     
     [c, ia, indRun] = unique(infoSession.(1), 'sorted');
     setDateSession = c(2:end); % 1st one is always empty
     nSession = length(setDateSession);
     
-    for iSession = 2 %1:length(setDateSession)
+    for iSession = 1:length(setDateSession)
         
         dateSession = setDateSession{iSession};
         % dateSession = '20191223';
@@ -103,10 +104,12 @@ for iSubj = 1 %:length(setNameSubj)
                 
                 idRun = setIndRun(iRun);
                 
-                tS_session(iMovie).matTS(:, :, iRun) = tSeries_DFL(idRun).C_raw(:, stimTiming_DFL(idRun).locCaFrame.locMovieOn:stimTiming_DFL(idRun).locCaFrame.locMovieOn+stimTiming_DFL(iRun).locCaFrame.durMovie)';
-                tS_session(iMovie).matTS_norm(:, :, iRun) = zscore(tS_session(iMovie).matTS(:, :, iRun));
-                tS_session(iMovie).avgTS = median(tS_session(iMovie).matTS(:, :, iRun), 3);
-                tS_session(iMovie).avgTS_norm = median(tS_session(iMovie).matTS_norm(:, :, iRun), 3);
+                tS_session(iMovie).matTS_C_raw(:, :, iRun) = tSeries_DFL(idRun).C_raw(:, stimTiming_DFL(idRun).locCaFrame.locMovieOn:stimTiming_DFL(idRun).locCaFrame.locMovieOn+stimTiming_DFL(iRun).locCaFrame.durMovie)';
+                tS_session(iMovie).matTS_C(:, :, iRun) = tSeries_DFL(idRun).C(:, stimTiming_DFL(idRun).locCaFrame.locMovieOn:stimTiming_DFL(idRun).locCaFrame.locMovieOn+stimTiming_DFL(iRun).locCaFrame.durMovie)';
+
+                tS_session(iMovie).matTS_C_raw_zscore(:, :, iRun) = zscore(tS_session(iMovie).matTS_C_raw(:, :, iRun));
+                tS_session(iMovie).avgTS_C_raw = median(tS_session(iMovie).matTS_C_raw(:, :, iRun), 3);
+                tS_session(iMovie).avgTS_C_raw_zscore = median(tS_session(iMovie).matTS_C_raw_zscore(:, :, iRun), 3);
                 
             end
             
@@ -121,31 +124,31 @@ for iSubj = 1 %:length(setNameSubj)
             save(saveFileName, 'stimTiming_DFL', 'tS_*')
         end   
         
-        if flagPlot % 
-            figCheck = figure;
-            set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 880 315])
-            for iCell = 1:size(tS_session(1).matTS, 2) %length(setCell) %1:size(matTS_movie, 1)
-                figure(figCheck);
-                SP(1) = subplot(2, 1, 1);
-                imagesc(zscore(squeeze(matTS_movie(iCell, :, :)))')
-                colormap(hot)
-                ylabel(SP(1), 'Viewing')
-                set(SP(1), 'CLim', [0 8]);
-                %     plot(squeeze(matTS_movie(iCell, :, :)))
-                SP(2) = subplot(2, 1, 2);
-                plot(zscore(squeeze(matTS_movie(iCell, :, :))))
-                axis tight
-                title(SP(1), sprintf('Cell #%d/%d: movie %s', iCell, size(matTS_movie,1), tSeries_DFL(1), setMovie{iMovie}));
-                
-                set(SP(:), 'XTickLabel', 20:20:120)
-                xlabel(SP(2), 'Time (s)');
-                ylabel(SP(2), 'Norm. resp. (std)')
-                
-                F(iCell) = getframe(gcf);
-                drawnow
-            end
-        end
-            
+%         if flagPlot % 
+%             figCheck = figure;
+%             set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 880 315])
+%             for iCell = 1:size(tS_session(1).matTS_C_raw, 2) %length(setCell) %1:size(matTS_movie, 1)
+%                 figure(figCheck);
+%                 SP(1) = subplot(2, 1, 1);
+%                 imagesc(zscore(squeeze(matTS_movie(iCell, :, :)))')
+%                 colormap(hot)
+%                 ylabel(SP(1), 'Viewing')
+%                 set(SP(1), 'CLim', [0 8]);
+%                 %     plot(squeeze(matTS_movie(iCell, :, :)))
+%                 SP(2) = subplot(2, 1, 2);
+%                 plot(zscore(squeeze(matTS_movie(iCell, :, :))))
+%                 axis tight
+%                 title(SP(1), sprintf('Cell #%d/%d: movie %s', iCell, size(matTS_movie,1), tSeries_DFL(1), setMovie{iMovie}));
+%                 
+%                 set(SP(:), 'XTickLabel', 20:20:120)
+%                 xlabel(SP(2), 'Time (s)');
+%                 ylabel(SP(2), 'Norm. resp. (std)')
+%                 
+%                 F(iCell) = getframe(gcf);
+%                 drawnow
+%             end
+%         end
+%             
 %         % save figures
 %         if flagSavePPTX
 %             fname_pptx = sprintf('%s_%s', nameSubj, dateSession); % fullfile('procdata/parksh/_marmoset/invivoCalciumImaging/', nameSubj, 'FOV1', sprintf('%s.pptx', dateSession));
