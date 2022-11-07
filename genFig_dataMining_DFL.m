@@ -41,7 +41,7 @@ dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1;
+iSubj = 2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -74,14 +74,145 @@ load(fname_caTSFOV, 'cellTS', 'cellPix')
 
 
 %%
-indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
+indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
 
+for ii = 1:length(cellTS)
+    minsnrmovie1(ii, 1) = min(cellTS(ii).snr_movie1);
+end
+
+indCellValid_snr = find(minsnrmovie1>0.1);   
+
+indCellValid = intersect(indCellValid_trial, indCellValid_snr);
+
+clear matAvg*
 for iCell = 1:length(indCellValid)   
     
-    matAvgTS1(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie1)'; % do I want to use this z-scored ts?
+    matAvgTS1(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie1)'; % now it's scaled dF
     matAvgTS2(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie2)'; %
+    
+    steAvgTS1(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie1)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie1, 1)-1))'; % now it's scaled dF
+    steAvgTS2(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie2)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie2, 1)-1))'; 
 
 end
+
+[coeff, score, latent, tsquared, explained] = pca(zscore(matAvgTS1)');
+[sortedScore, indCell] = sort(score(:,1), 'descend');
+[sortedScore2, indCell2] = sort(score(:,2), 'descend');
+
+explained(1:10)
+
+figure;
+subplot(2,1,1)
+imagesc(zscore(matAvgTS1)');
+set(gca, 'CLim', [0 10])
+colormap(hot)
+title('movie 1 responses (zscore)')
+subplot(2,1,2)
+imagesc(zscore(matAvgTS1(:,indCell))');
+set(gca, 'CLim', [0 10])
+colormap(hot)
+title('movie 1 responses (zscore): sorted along PC1')
+
+figure;
+plot(coeff(:,1:3))
+legend('PC1', 'PC2', 'PC3')
+
+
+
+figure;
+cMap_sort = autumn(length(indCell)); %jet(length(indCell)); %hsv(k);
+
+[d1 d2] = size(infoCells(1).imgFOV);
+% imagesc(imgFOV); 
+% colormap(sp(3), gray);
+% hold on;
+for iCell = 1:length(indCell)
+    iC = indCell(iCell);
+        Coor = cellPix(iC).contourCell{1};
+        plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iCell, :)); hold on;
+end
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20])
+
+
+k = 4;
+[IDXdfl, C, SUMD] = kmeans(zscore(matAvgTS1)', k, 'Distance', 'correlation');
+[sortedIDXdfl, indCelldfl] = sort(IDXdfl);
+clear indCell_sort
+for iType = 1:k
+    indCell_sort{iType} = indCelldfl(sortedIDXdfl==iType);
+end
+
+% 
+% Plotting
+fig_summary_DFL = figure;
+set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
+clear sp
+% 
+% % 1. averaged amplitude for each condition
+% figure(fig_summary_DFL);
+% sp(1) = subplot('Position', [0.2 0.65 0.75 0.3]);
+% imagesc(catAvgMatTS(:, indCelldfl)');
+% colormap(hot);
+% set(sp(1), 'CLim', [-1 1].*4)
+% set(sp(1), 'YTick', find(diff(sortedIDXdfl)>0), 'YTickLabel', [])
+% set(sp(1), 'XTick', 200:200:1200, 'XTickLabel', 20:20:120)
+% set(sp(1), 'TickDir', 'out')
+% box off
+% colorbar;
+% title(sprintf('%s %s: averaged response to movie %s', nameSubj, dateSession, tS_session(iMovie).idStim))
+% ylabel('Cells (sorted)')
+% xlabel('Time (s)')
+% 
+% 2. Clustering results on 2-d PC space
+figure(fig_summary_DFL);
+sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
+cMap_sort = hsv(k);
+
+for iType = 1:k
+        plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
+        hold on;
+end
+legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5', 'Location', 'best')
+xlabel(sprintf('PC 1: explained %2.2f %% var', explained(1)))
+ylabel(sprintf('PC 2: explained %2.2f %% var', explained(2)))
+set(gca, 'TickDir', 'out')
+box off
+axis square
+title('Clustering based on movie response on PC space')
+
+% 3. Clustering results on imaging field of view
+figure(fig_summary_DFL);
+sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
+cMap_sort = hsv(k);
+
+[d1 d2] = size(infoCells(1).imgFOV);
+% imagesc(imgFOV); 
+% colormap(sp(3), gray);
+% hold on;
+for iType = 1:k
+    for iC = 1:size(indCell_sort{iType}, 1)
+        Coor = cellPix(indCell_sort{iType}(iC, 1)).contourCell{1};
+        plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :)); hold on;
+    end
+end
+axis on
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20])
+
+%% spatial map
+tempA = cat(2, cellPix(indCellValid).repPix);
+tempA(~isnan(tempA)) = 1;
+% tempA(:, indCellValid) = tempA(:, indCellValid).*10;
+
+imgCells = sum(tempA, 2, 'omitnan');
+imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
+
+figure;
+set(gcf, 'Color', 'w')
+imagesc(imgCells_2d)
+colormap(turbo)
+
+
+% pnrs = max(obj.C, [], 2)./std(obj.C_raw-obj.C, 0, 2);
 
 
 

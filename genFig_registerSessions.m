@@ -38,7 +38,7 @@ dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1;
+iSubj = 2; % 1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -70,7 +70,7 @@ fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s
 load(fname_caTSFOV, 'cellTS', 'cellPix')
 
 %% Stacked cells across days: playing with examples
-indCellValid = cat(1, cellTS.nTrial1_total)>8;
+indCellValid = find(cat(1, cellTS.nTrial1_total)>8);
 
 % tempATrial = cat(2, cellPix(indCellValid).repPix);
 % tempATrial(~isnan(tempATrial)) = 10;
@@ -203,7 +203,7 @@ end
 %         %     plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
 %         %     hold on
 %         
-%         tempMatTS1 = cat(1, tempMatTS1, squeeze(resultsDFL(iS).tS_session(1).matTS_norm(:, cellID(iS), :))');
+%         tempMatTS1 = cat(1, tempMatTS1, squeeze(resultsDFL(iS).tS_session(1).matTS_C_raw_zscore(:, cellID(iS), :))');
 %         nTrial = cat(1, nTrial, size(tempMatTS1, 1));
 %         
 %         %     subplot(2,1,2)
@@ -211,7 +211,7 @@ end
 %         %     plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
 %         %     hold on
 %         
-%         tempMatTS2 = cat(1, tempMatTS2, squeeze(resultsDFL(iS).tS_session(2).matTS_norm(:, cellID(iS), :))');
+%         tempMatTS2 = cat(1, tempMatTS2, squeeze(resultsDFL(iS).tS_session(2).matTS_C_raw_zscore(:, cellID(iS), :))');
 %     end
 %     
 %     tempValidS = ~isnan(cellID);

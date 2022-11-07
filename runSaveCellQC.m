@@ -1,11 +1,14 @@
 % runSaveCellQC.m
 %
-% 2022/10/25 SHP 
+% 2022/11/03 SHP
+% - save the variance of noise (scale factor) and save the valid cell
+% indices based on the SNR from the entire ts of the session
+% 2022/10/25 SHP
 % - add the procedure of selecting out spatially more localized cells at
 % the level of 80% (infoCells(iSession).indCellValid_spatialCluster_0p2)
 % - remove the part that exclude cells from Max's FOV ROI-based methods
 %   : instead, just carrying that info here (infoCells(iSession).indCellValid_fov)
-%   so that it is available with the spatial-localization-based valid cell indices 
+%   so that it is available with the spatial-localization-based valid cell indices
 % 2022/06/01 SHP
 % - load each session and save the SNR, PNR, number of cells, etc.
 %
@@ -27,104 +30,139 @@ flagSaveFile = 1;
 
 
 %% Get session info
-nameSubj = 'Max'; %'Tabla';
-FOV_ID = 3; %1;
-[infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
+setSubj = {'Tabla', 1; 'Max', 3};
 
-[c, ia, indRun] = unique(infoSession.(1), 'sorted');
-setDateSession = c(2:end); % 1st one is always empty
-nSession = length(setDateSession);
-
-infoCells = struct([]);
-
-for iSession = 1:length(setDateSession)
+for iSubj = 1:size(setSubj,1)
     
-    dateSession = setDateSession{iSession}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
-    % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
+    nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+    FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
+    [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
     
-    dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-    dirPreproc = fullfile(dirProcdata_session, '_preproc');
+    [c, ia, indRun] = unique(infoSession.(1), 'sorted');
+    setDateSession = c(2:end); % 1st one is always empty
+    nSession = length(setDateSession);
     
-    dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
+    infoCells = struct([]);
     
-    
-    %% Read source data
-    addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
-    cnmfe_setup;
-    d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
-    
-    load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
-    
-    %% Cell quality check using SNR and PNR
-    snrs = var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2); % signal variance divided by noise variance
-    pnrs = max(neuron.C, [], 2)./std(neuron.C_raw-neuron.C, 0, 2); % peak amplitude divided by noise std
-   
-    [a, sortedID_snr] = sort(snrs, 'descend');
-    [aa, sortedID_pnr] = sort(pnrs, 'descend');
-    
-
-    % % draw all the contours
-    % neuron_b.show_contours([], [], imgFOV, 'true');
-    
-    imgFOV = neuron.Cn.*neuron.PNR;
-    [center] = neuron.estCenter();
-    
-    thr = 0.2;
-    Coor = neuron.get_contours(thr); 
-    [nrows, ncols] = cellfun(@size, Coor);
-    locClustered = find(ncols > 2); % the ones with a reasonable localized contour at this threshold
-
-    
-%     figure    
-%     imagesc(imgFOV)
-%     hold on
-%     plot(center(indCell_highSNR,2), center(indCell_highSNR, 1), 'g.')
-%     text(center(indCell_highSNR,2)+1, center(indCell_highSNR,1), num2str([1:size(indCell_highSNR,1)]'), 'Color', 'g');
-%     axis off
-
-    %% concatenate data into a struct
-    infoCells(iSession).snrs = snrs;
-    infoCells(iSession).pnrs = pnrs;
-    infoCells(iSession).snrs_mean = mean(snrs);
-    infoCells(iSession).indCell_highSNR = find(snrs>mean(snrs));
-    infoCells(iSession).indCell_highPNR = find(snrs>mean(pnrs));
-    infoCells(iSession).coor_0p2 = Coor; 
-    infoCells(iSession).indCellValid_fov = 1:length(neuron.ids);
-    if strcmpi(nameSubj, 'max')
-        load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
-        infoCells(iSession).indCellValid_fov = indCell.validCell;
+    for iSession = 1:length(setDateSession)
+        
+        dateSession = setDateSession{iSession}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+        % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
+        
+        dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+        dirPreproc = fullfile(dirProcdata_session, '_preproc');
+        
+        dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
+        
+        
+        %% Read source data
+        addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
+        cnmfe_setup;
+        d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
+        
+        load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
+        
+        %% Cell quality check using SNR and PNR
+        snrs = var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2); % signal variance divided by noise variance
+        pnrs = max(neuron.C, [], 2)./std(neuron.C_raw-neuron.C, 0, 2); % peak amplitude divided by noise std
+        varNoise = var(neuron.C_raw-neuron.C, 0, 2); % variance of noise
+        
+        [a, sortedID_snr] = sort(snrs, 'descend');
+        [aa, sortedID_pnr] = sort(pnrs, 'descend');
+        
+        % % draw all the contours
+        % neuron_b.show_contours([], [], imgFOV, 'true');
+        
+        imgFOV = neuron.Cn.*neuron.PNR;
+        [center] = neuron.estCenter();
+        
+        thr = 0.2;
+        Coor = neuron.get_contours(thr);
+        [nrows, ncols] = cellfun(@size, Coor);
+        locClustered = find(ncols > 2); % the ones with a reasonable localized contour at this threshold
+        
+        
+        %     figure
+        %     imagesc(imgFOV)
+        %     hold on
+        %     plot(center(indCell_highSNR,2), center(indCell_highSNR, 1), 'g.')
+        %     text(center(indCell_highSNR,2)+1, center(indCell_highSNR,1), num2str([1:size(indCell_highSNR,1)]'), 'Color', 'g');
+        %     axis off
+        
+        %% concatenate data into a struct
+        infoCells(iSession).snrs = snrs;
+        infoCells(iSession).pnrs = pnrs;
+        infoCells(iSession).varNoise = varNoise;
+        infoCells(iSession).snrs_mean = mean(snrs);
+        infoCells(iSession).snr_crit = 0.3;
+        infoCells(iSession).indCellValid_snr = find(snrs>infoCells(iSession).snr_crit);
+%         infoCells(iSession).indCell_highSNR = find(snrs>mean(snrs));
+%         infoCells(iSession).indCell_highPNR = find(snrs>mean(pnrs));
+        infoCells(iSession).indCellValid_fov = (1:length(neuron.ids))';
+        if strcmpi(nameSubj, 'max')
+            load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
+            infoCells(iSession).indCellValid_fov = indCell.validCell;
+        end
+        infoCells(iSession).coor_0p2 = Coor;
+        infoCells(iSession).indCellValid_spatialCluster_0p2 = locClustered;
+        %     infoCells(iSession).coor_0p5 = neuron.get_contours(0.5);
+        
+        
+        % Basic info
+        infoCells(iSession).dirSession = dirProcdata_session;
+        infoCells(iSession).imgFOV = imgFOV;
+        infoCells(iSession).cellCenter = center;
+        infoCells(iSession).A = neuron.A;
+        
+        fprintf(1, '\n processed session #%d/%d...', iSession, length(setDateSession))
+        
     end
-    infoCells(iSession).indCellValid_spatialCluster_0p2 = locClustered;
-%     infoCells(iSession).coor_0p5 = neuron.get_contours(0.5);
     
-    
-    % Basic info
-    infoCells(iSession).dirSession = dirProcdata_session;
-    infoCells(iSession).imgFOV = imgFOV;
-    infoCells(iSession).cellCenter = center;
-    
-    fprintf(1, '\n processed session #%d/%d...', iSession, length(setDateSession))
+    %% Save the data
+    %% in main procdata FOV folder
+    if flagSaveFile
+        fname_cellQC = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellQC.mat',...
+            nameSubj, FOV_ID, nameSubj, FOV_ID));
+        save(fname_cellQC, 'infoCells')
+    end
     
 end
 
-%% Save the data
-%% in main procdata FOV folder
-if flagSaveFile
-    fname_cellQC = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellQC.mat',...
-        nameSubj, FOV_ID, nameSubj, FOV_ID));
-    save(fname_cellQC, 'infoCells')
-end
-
+%     %% try out DFL signal noise variance calculation
+%     load(fullfile(dirProcdata_session, 'DFL_ts_tML.mat'), 'tS_session');
+%
+%     % compute snr based only on the movie responses
+%
+%
+%     for iCell = 1:size(tS_session(1).matTS_C_raw, 2)
+%         aa = squeeze(tS_session(1).matTS_C_raw(:,iCell,:));
+%         yyyRaw = aa(:);
+%         aaC = squeeze(tS_session(1).matTS_C(:,iCell,:));
+%         yyyC = aaC(:);
+%         yyyN = yyyRaw-yyyC;
+%
+%         [pp, ff] = periodogram(yyyRaw, [], length(yyyRaw), 10);
+%         locNoiseF = find(ff>2.5);
+%         locSignalF = find(ff<1);
+%         powerRaw_NoiseF(iCell,1) = sum(pp(locNoiseF));
+%         powerRaw_SignalF(iCell,1) = sum(pp(locSignalF));
+%
+%         % compute other measures
+%         snr_usingC(iCell,1) = var(yyyC)./var(yyyN);
+%         pnr_usingC(iCell,1) = max(yyyC)./var(yyyN);
+%         noise_usingC(iCell,1) = var(yyyN);
+%
+%     end
 
 
 % %% playing
 % for i = 1:length(infoCells)
 %     indlow10 = [];
 %     indlow10 = find(infoCells(i).pnrs<10);
-%     
+%
 %     [sortpnrs, indsort] = sort(infoCells(i).pnrs, 'descend');
 %     indtop10 = indsort(1:10);
-%     
+%
 %     figure(100)
 %     plot(infoCells(i).cellCenter(indtop10,2), infoCells(i).cellCenter(indtop10, 1), '.', 'MarkerSize', 15);
 %     set(gca, 'YDir', 'reverse')
@@ -137,43 +175,43 @@ end
 % nameSubj = 'Tabla'; %'Max'; %'Tabla';
 % FOV_ID = 1; %3; %1;
 % [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
-% 
+%
 % [c, ia, indRun] = unique(infoSession.(1), 'sorted');
 % setDateSession = c(2:end); % 1st one is always empty
 % nSession = length(setDateSession);
 % tempMatTS1 = []; tempMatTS2 = [];
 % for iS = 1:length(cellID)
-%     
+%
 %     if isnan(cellID(iS))
 %         continue;
 %     end
-%         
+%
 %     dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
 %     % datestr(datenum(dateSession, 'yyyymmdd'), 'yymmdd') % for bhv files
-%     
+%
 %     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-%     
+%
 %     load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
-%     
+%
 %     figure(200);
 %     subplot(2,1,1)
 %     title('Mov 1')
 %     plot(squeeze(tS_session(1).matTS_norm(:, cellID(iS), :)))
 %     hold on
-%     
+%
 %     tempMatTS1 = cat(1, tempMatTS1, squeeze(tS_session(1).matTS_norm(:, cellID(iS), :))');
-%     
+%
 %     subplot(2,1,2)
 %     title('Mov 2')
 %     plot(squeeze(tS_session(2).matTS_norm(:, cellID(iS), :)))
 %     hold on
-%     
+%
 %     tempMatTS2 = cat(1, tempMatTS2, squeeze(tS_session(2).matTS_norm(:, cellID(iS), :))');
 % end
-    
 
-%     indCell_highSNR = find(snrs>mean(snrs)); 
-%     
+
+%     indCell_highSNR = find(snrs>mean(snrs));
+%
 %     for i = 1:124
 %         figure(100);
 %         subplot(2,1,1); cla;
@@ -187,8 +225,8 @@ end
 %         axis tight
 %         input('')
 %     end
-%      
-% 
+%
+%
 % load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
 % load(fullfile(dirProcdata_session, 'DFL_ts.mat'))
 % load(fullfile(dirProcdata_session, 'RS_ts.mat'))
@@ -202,7 +240,7 @@ end
 %         plot(tSeries_BPM(2).C(sortedID_pnr(i), 1:1200), 'm-')
 %         axis tight
 %         title(sprintf('%s BPM: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_pnr(i), a(i)))
-%         
+%
 %         subplot(3,1,2); cla;
 %         plot(tSeries_DFL(4).C_raw(sortedID_pnr(i), :))
 %         hold on
@@ -212,7 +250,7 @@ end
 %         plot(tSeries_DFL(5).C(sortedID_pnr(i), :), 'm-')
 %         axis tight
 %         title(sprintf('%s DFL: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_pnr(i), a(i)))
-%         
+%
 %         subplot(3,1,3); cla;
 %         plot(tSeries_RS.C_raw(sortedID_pnr(i), 1001:2200))
 %         hold on
@@ -222,30 +260,30 @@ end
 %         plot(tSeries_RS.C(sortedID_pnr(i), 3001:4200), 'm-')
 %         axis tight
 %         title(sprintf('%s RS: cell %d SNR = %2.2f', [nameSubj dateSession], sortedID_pnr(i), a(i)))
-%         
+%
 %         input('')
 %     end
-    
 
 
 
-    % get the contours and image field of view
-    % neuron_b = neuron.batches{1}.neuron;
-    
-    
-    
+
+% get the contours and image field of view
+% neuron_b = neuron.batches{1}.neuron;
+
+
+
 %     % Generate cell location map within FOV
-    thr = 0.5; % the lower the smaller (more centralized) the contour
+thr = 0.5; % the lower the smaller (more centralized) the contour
 %     cellColor = [1 1 1];
 %     widthContour = 1;
 %     [d1,d2] = size(neuron.Cn);
-%     
+%
 %     figure;
 %     imagesc(zeros(d1, d2)); % background
 %     colormap(gray);
 %     caxis([0 0.1]);
 %     hold on;
-%     
+%
 %     CC = cell(size(neuron.A, 2),1);
 %     CR = cell(size(neuron.A, 2),2);
 %     for i = 1:size(neuron.A ,2)
@@ -268,15 +306,15 @@ end
 %     title(sprintf('%s: %s', nameSubj, dateSession))
 %     % %save
 %     % print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
-%     
+%
 %     % end
 % %     %
 %     Coor = neuron.get_contours(thr); % Coor = get_contours(obj, thr, ind_show); % ind_show: indices of cells you want to get contours
 %     imgFOV = neuron.Cn.*neuron.PNR;
-%     
+%
 %     % % draw all the contours
 %     % neuron_b.show_contours([], [], imgFOV, 'true');
-%     
+%
 %     figure
 %     [center] = neuron.estCenter();
 %     center = center(validIndCell, :);
@@ -286,10 +324,10 @@ end
 %     text(center(:,2)+1, center(:,1), num2str([1:size(center,1)]'), 'Color', 'w');
 %     axis off
 
-    
-   
-    
-    
+
+
+
+
 % end
 
 

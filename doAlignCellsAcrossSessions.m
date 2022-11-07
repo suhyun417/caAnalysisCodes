@@ -94,7 +94,8 @@ for iSession = 1:nSession
 %     curCanvas = NaN(size(neuron.Cn));
     stackCell = NaN(size(neuron.A));
     invalidCell = []; % any cell that may not pass the below procedure
-    validCell = intersect(infoCells(iSession).indCellValid_spatialCluster_0p2, infoCells(iSession).indCellValid_fov);
+    validCell = intersect(intersect(infoCells(iSession).indCellValid_spatialCluster_0p2, infoCells(iSession).indCellValid_fov), ...
+        infoCells(iSession).indCellValid_snr);
     
     for i = 1:size(neuron.A ,2)
         if ~ismember(i, validCell)
@@ -150,7 +151,8 @@ flagDone = NaN(size(idMatrix, 1), 1);
 for iCell = 1:size(idMatrix,1)
     idSession = idMatrix(iCell, 1);
     idCell = idMatrix(iCell, 2);
-    if ismember(idCell, intersect(infoCells(idSession).indCellValid_spatialCluster_0p2, infoCells(idSession).indCellValid_fov))...
+    if ismember(idCell, intersect(intersect(infoCells(idSession).indCellValid_spatialCluster_0p2, infoCells(idSession).indCellValid_fov), ...
+        infoCells(idSession).indCellValid_snr))...
             && ~ismember(idCell, cellAcrossDay(idSession).invalidCell)
         flagDone(iCell) = 0;
     end
