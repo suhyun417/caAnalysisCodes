@@ -34,20 +34,70 @@ end
 dirFig = '/nifvault/projects/parksh/0Marmoset/Ca/_labNote/_figs';
 
 %% Session info & optional parameters
-setSubj ={'Tabla', 'Max'};
+setSubj = {'Tabla', 1; 'Max', 3};
 
-dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
+iSubj = 1; %2; %1;
 
-nameSubj = 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
-FOV_ID = 1; %3; %1;
+nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
 [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
 
 [c, ia, indRun] = unique(infoSession.(1), 'sorted');
 setDateSession = c(2:end); % 1st one is always empty
 nSession = length(setDateSession);
 
-%%
 
+%% load saved files
+% cells pooled across days
+fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellAcrossDay.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID)); 
+load(fname_stack, 'cellIDAcrossDay'); %, 'stackCellCenter')
+
+% cell quality info 
+fname_cellQC = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellQC.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID)); 
+load(fname_cellQC, 'infoCells')
+
+% translational shift across days
+fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_shifts.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID));  
+load(fname_shifts, 'shifts')
+
+% aligned cells TS and spatial info
+fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+load(fname_caTSFOV, 'cellTS', 'cellPix')
+
+fname_caTSFOV_RS = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_RSsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+load(fname_caTSFOV, 'cellTS_RS', 'resultsRS')
+
+%%
+indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
+% indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
+% 
+for ii = 1:length(cellTS)
+    minsnrmovie1(ii, 1) = min(cellTS(ii).snr_movie1);
+end
+
+% indCellValid_snr = find(minsnrmovie1>0.1);   
+
+% indCellValid = intersect(indCellValid_trial, indCellValid_snr);
+
+clear matAvg*
+for iCell = 1:length(indCellValid)   
+    
+    matAvgTS1(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie1)'; % now it's scaled dF
+    matAvgTS2(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie2)'; %
+    
+    steAvgTS1(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie1)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie1, 1)-1))'; % now it's scaled dF
+    steAvgTS2(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie2)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie2, 1)-1))'; 
+
+end
+
+[coeff, score, latent, tsquared, explained] = pca(zscore(matAvgTS1)');
+[sortedScore, indCell] = sort(score(:,1), 'descend');
+[sortedScore2, indCell2] = sort(score(:,2), 'descend');
+
+explained(1:10)
 
 %% Read source data
 addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
@@ -106,15 +156,94 @@ title(sprintf('%s: %s', nameSubj, dateSession))
 %
 Coor = neuron.get_contours(thr); 
 CC = Coor;
-    for i = 1:size(Aor,2)
-%         cont = medfilt1(Coor{i}')';
-        cont = Coor{i}; 
-        if size(cont,2) > 1
-            plot(cont(1,1:end),cont(2,1:end),'Color',cmap(i+size(Aor,2),:), 'linewidth', ln_wd); hold on;
-        end
+for i = 1:size(Aor,2)
+    %         cont = medfilt1(Coor{i}')';
+    cont = Coor{i};
+    if size(cont,2) > 1
+        plot(cont(1,1:end),cont(2,1:end),'Color',cmap(i+size(Aor,2),:), 'linewidth', ln_wd); hold on;
     end
+end
 
-% %% 2022 Training Day figures
+
+%% Population responses with clustering
+load('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/', 'DFL_TS_clustering.mat', 'Clustering_all', 'paramClustering')
+
+
+iSubj = 2;
+
+k = 5;
+[a, b] = min(sum(Clustering_all(iSubj).resultKMeans(k-1).cell_sumD))
+IDXdfl = Clustering_all(iSubj).resultKMeans(k-1).cell_indCluster(:, b);
+[sortedIDXdfl, indCelldfl] = sort(IDXdfl);
+clear indCell_sort
+for iType = 1:k
+indCell_sort{iType} = indCelldfl(sortedIDXdfl==iType);
+end
+%
+% Plotting
+fig_summary_DFL = figure;
+set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
+clear sp
+
+% 2. Clustering results on 2-d PC space
+figure(fig_summary_DFL);
+sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
+cMap_sort = hsv(k);
+for iType = 1:k
+plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
+hold on;
+end
+legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5', 'Location', 'best')
+xlabel(sprintf('PC 1: explained %2.2f %% var', explained(1)))
+ylabel(sprintf('PC 2: explained %2.2f %% var', explained(2)))
+set(gca, 'TickDir', 'out')
+box off
+axis square
+title('Clustering based on movie response on PC space')
+% 3. Clustering results on imaging field of view
+figure(fig_summary_DFL);
+sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
+cMap_sort = hsv(k);
+[d1 d2] = size(infoCells(1).imgFOV);
+% imagesc(imgFOV);
+% colormap(sp(3), gray);
+% hold on;
+for iType = 1:k
+for iC = 1:size(indCell_sort{iType}, 1)
+Coor = cellPix(indCell_sort{iType}(iC, 1)).contourCell{1};
+plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :)); hold on;
+end
+end
+axis on
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20], 'Color', 'k')
+
+
+figure
+set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto')
+imagesc(zscore(matAvgTS1(:, indCelldfl))')
+colormap(hot)
+set(gca, 'CLim', [-2 10])
+set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
+
+%% Resting state    
+setSubj = {'Tabla', 1; 'Max', 3};
+
+iSubj = 1; %2; %1;
+
+nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
+
+fname_caTSFOV_RS = fullfile(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_RSsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
+
+
+
+
+
+
+
+
+%% 2022 Training Day figures
 % %% Intro figure: three different movie-driven ts of macaque face cells
 % load('/nifvault/procdata/parksh/_macaque/matSDF_Movie123_allCells.mat', 'matTS_FP')
 % 

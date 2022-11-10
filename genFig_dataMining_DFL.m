@@ -41,7 +41,7 @@ dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 2; %1;
+iSubj = 1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -72,17 +72,20 @@ load(fname_shifts, 'shifts')
 fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
 load(fname_caTSFOV, 'cellTS', 'cellPix')
 
+fname_caTSFOV_RS = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_RSsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
 
 %%
-indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
-
+indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
+% indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
+% 
 for ii = 1:length(cellTS)
     minsnrmovie1(ii, 1) = min(cellTS(ii).snr_movie1);
 end
 
-indCellValid_snr = find(minsnrmovie1>0.1);   
+% indCellValid_snr = find(minsnrmovie1>0.1);   
 
-indCellValid = intersect(indCellValid_trial, indCellValid_snr);
+% indCellValid = intersect(indCellValid_trial, indCellValid_snr);
 
 clear matAvg*
 for iCell = 1:length(indCellValid)   
@@ -118,16 +121,18 @@ plot(coeff(:,1:3))
 legend('PC1', 'PC2', 'PC3')
 
 
+[sortedScore_abs, indCell_abs] = sort(abs(score(:,1)), 'descend');
 
 figure;
-cMap_sort = autumn(length(indCell)); %jet(length(indCell)); %hsv(k);
+cMap_sort = jet(length(indCell)); %jet(length(indCell)); %hsv(k);
+% cMap_sort = autumn(20);
 
 [d1 d2] = size(infoCells(1).imgFOV);
 % imagesc(imgFOV); 
 % colormap(sp(3), gray);
 % hold on;
 for iCell = 1:length(indCell)
-    iC = indCell(iCell);
+    iC = indCell_abs(iCell);
         Coor = cellPix(iC).contourCell{1};
         plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iCell, :)); hold on;
 end
@@ -215,6 +220,114 @@ colormap(turbo)
 % pnrs = max(obj.C, [], 2)./std(obj.C_raw-obj.C, 0, 2);
 
 
+%% more serious clustering attempt
+[a, c, totalSS] = kmeans(zscore(matAvgTS1)', 1, 'Distance', 'correlation'); % cell
+Clustering.totalSS_cell = totalSS;
+[a, c, totalSS] = kmeans(zscore(matAvgTS1), 1, 'Distance', 'correlation'); % time
+Clustering.totalSS_time = totalSS;
+
+setK = 2:10;
+numReplicates = 5;
+opts = statset('Display','final');
+numRepeat = 100;
+for iK = 1:length(setK)
+    
+    K = setK(iK);                
+    
+    % max of abs
+    cell_indCluster = NaN(size(matAvgTS1, 2), numRepeat);
+    cell_sumD = NaN(K, numRepeat);
+    
+    time_indCluster = NaN(size(matAvgTS1, 1), numRepeat);
+    time_sumD = NaN(K, numRepeat);
+
+    for iRep = 1:numRepeat
+        
+        fprintf(1, ':: K = %d; maxabs ::\n', K);
+        
+        % Cluster single units based on whole brain correlation
+        [IDX_SU, C_SU, SUMD_SU] = kmeans(zscore(matAvgTS1)', K,...
+            'Replicates', numReplicates, 'Options', opts, 'Distance', 'correlation');
+        
+        cell_indCluster(:, iRep) = IDX_SU;
+        cell_sumD(:, iRep) = SUMD_SU;
+        
+        % Cluster ROIs based on single unit correlation
+        [IDX_time, C_time, SUMD_time] = kmeans(zscore(matAvgTS1), K,...
+            'Replicates', numReplicates, 'Options', opts, 'Distance', 'correlation');
+        
+        time_indCluster(:, iRep) = IDX_time;
+        time_sumD(:, iRep) = SUMD_time;
+        
+    end
+
+    Clustering.resultKMeans(iK).cell_indCluster = cell_indCluster;
+    Clustering.resultKMeans(iK).cell_sumD = cell_sumD;
+    Clustering.resultKMeans(iK).time_indCluster = time_indCluster;
+    Clustering.resultKMeans(iK).time_sumD = time_sumD;
+
+end
+
+paramClustering.methods = 'KMeans using Correlation distance';
+paramClustering.setK = setK;
+paramClustering.numReplicates = numReplicates;
+paramClustering.numRepeat = numRepeat;
+
+
+%% Explained variance elbow plot
+setK = paramClustering.setK; %Clustering.setK;
+
+matWSS=[];
+matExpVar=[];
+for iK = 1:length(setK)
+    curK = setK(iK);
+%     indClust = Clustering_moviemask_valid.resultKMeans(iK).SU_indCluster; %Clustering.resultKMeans(iK).SU_indCluster;
+%     [sortedClust, indSortedChan]=sort(indClust);
+    
+%     tExpVar=[];
+%     for ii = 1:curK
+%         tExpVar(ii,1) = Clustering.resultKMeans(iK).SU_sumD(ii)/(2*sum(sortedClust==ii));
+%     end
+    
+    matWSS(:,iK) = sum(Clustering.resultKMeans(iK).cell_sumD); %sum(Clustering.resultKMeans(iK).SU_sumD);
+%     matExpVar(iK,1) = sum(tExpVar);
+
+end
+
+totalSS = Clustering.totalSS_cell;
+% [a, c, totalSS] = kmeans(matR_SU_moviemask', 1); %kmeans(matR_SU', 1);
+betweenSS = totalSS-matWSS;
+% totalVar = totalSS/(2*size(matR_SU,2)); %totalD/(2*size(matR_SU,2));
+
+propExplained = (totalSS-matWSS)./totalSS; %matExpVar./totalSS;
+
+%% plot Clustering results
+% explained variance
+figure;
+plot(setK, propExplained'.*100, 'ko-'); hold on
+xlabel('Number of cluster (K)')
+ylabel('Explained variance (%)')
+set(gca, 'XTick', setK)
+
+figure;
+plot(setK(1:end-1), diff(propExplained').*100)
+hold on
+plot(setK(1:end-1), mean(diff(propExplained').*100, 2), 'ko-', 'LineWidth', 2)
+title('difference of explained variance for each K')
+
+% distance within each cluster
+figure;
+set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto')
+for iK=1:length(setK)
+    plot(iK+1, mean(Clustering.resultKMeans(iK).cell_sumD, 2), 'ko', 'MarkerSize', 10, 'LineWidth', 2)
+    hold on
+end
+xlim([1 setK(end)])
+set(gca, 'LineWidth', 2, 'FontSize', 12)
+box off
+title('Clustering of single units')
+xlabel('Number of cluster')
+ylabel('Within-cluster distance')
 
 %%
 % clear all;
