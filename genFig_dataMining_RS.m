@@ -1,11 +1,9 @@
-% genFig_dataMining_DFL.m
+% genFig_dataMining_RS.m
 %
-% 2022/11/01 SHP: started new by applying longitudinally registered cells,
-% instead of looking at session to session data
-% 2021/12/21 SHP: working on the part that selects good cells
-% 2021/09/08 SHP
-% Digging DFL data to find out something
-% started from "genFig_functionalMapFOV.m"
+% 2022/11/10 SHP
+% Digging Resting State data to find out the relationship between
+% movie-driven responses and spontaneous activity
+% modified from "genFig_dataMining_DFL.m"
 
 clear all;
 
@@ -41,7 +39,7 @@ dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1; %2; %1;
+iSubj = 1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -77,28 +75,35 @@ load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
 
 %%
 indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
-% indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
+% % indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
+% % 
+% for ii = 1:length(cellTS)
+%     minsnrmovie1(ii, 1) = min(cellTS(ii).snr_movie1);
+% end
 % 
-for ii = 1:length(cellTS)
-    minsnrmovie1(ii, 1) = min(cellTS(ii).snr_movie1);
-end
+% % indCellValid_snr = find(minsnrmovie1>0.1);   
+% 
+% % indCellValid = intersect(indCellValid_trial, indCellValid_snr);
+% 
+% clear matAvg*
+% for iCell = 1:length(indCellValid)   
+%     
+%     matAvgTS1(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie1)'; % now it's scaled dF
+%     matAvgTS2(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie2)'; %
+%     
+%     steAvgTS1(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie1)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie1, 1)-1))'; % now it's scaled dF
+%     steAvgTS2(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie2)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie2, 1)-1))'; 
+% 
+% end
 
-% indCellValid_snr = find(minsnrmovie1>0.1);   
 
-% indCellValid = intersect(indCellValid_trial, indCellValid_snr);
+%%
+iS = 1; % for each session
 
-clear matAvg*
-for iCell = 1:length(indCellValid)   
-    
-    matAvgTS1(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie1)'; % now it's scaled dF
-    matAvgTS2(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie2)'; %
-    
-    steAvgTS1(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie1)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie1, 1)-1))'; % now it's scaled dF
-    steAvgTS2(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie2)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie2, 1)-1))'; 
+% matTS_norm = zscore(resultsRS(iS).C_raw, 0, 2);
+matTS_norm = resultsRS(iS).C_raw./repmat(var(resultsRS(iS).C_raw-resultsRS(iS).C, [], 2), 1, size(resultsRS(iS).C_raw, 2)); %
 
-end
-
-[coeff, score, latent, tsquared, explained] = pca(zscore(matAvgTS1)');
+[coeff, score, latent, tsquared, explained] = pca(zscore(matTS_norm));
 [sortedScore, indCell] = sort(score(:,1), 'descend');
 [sortedScore2, indCell2] = sort(score(:,2), 'descend');
 
@@ -106,46 +111,52 @@ explained(1:10)
 
 figure;
 subplot(2,1,1)
-imagesc(zscore(matAvgTS1)');
-set(gca, 'CLim', [0 10])
+imagesc(zscore(matTS_norm')');
+set(gca, 'CLim', [-1 5])
 colormap(hot)
-title('movie 1 responses (zscore)')
+title('resting state responses (zscore)')
 subplot(2,1,2)
-imagesc(zscore(matAvgTS1(:,indCell))');
-set(gca, 'CLim', [0 10])
+imagesc(zscore(matTS_norm(indCell, :)')');
+set(gca, 'CLim', [-1 5])
 colormap(hot)
-title('movie 1 responses (zscore): sorted along PC1')
+title('resting state responses (zscore): sorted along PC1')
 
 figure;
 plot(coeff(:,1:3))
 legend('PC1', 'PC2', 'PC3')
 
 
-[sortedScore_abs, indCell_abs] = sort(abs(score(:,1)), 'descend');
-
-figure;
+% figure;
 % cMap_sort = jet(length(indCell)); %jet(length(indCell)); %hsv(k);
-cMap_sort = autumn(length(indCell));
+% % cMap_sort = autumn(20);
+% 
+% [d1 d2] = size(infoCells(1).imgFOV);
+% % imagesc(imgFOV); 
+% % colormap(sp(3), gray);
+% % hold on;
+% for iCell = 1:length(indCell)
+%     iC = indCell_abs(iCell);
+%         Coor = cellPix(iC).contourCell{1};
+%         plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iCell, :)); hold on;
+% end
+% set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20])
 
-[d1 d2] = size(infoCells(1).imgFOV);
-% imagesc(imgFOV); 
-% colormap(sp(3), gray);
-% hold on;
-for iCell = 1:length(indCell)
-    iC = indCell(iCell);
-        Coor = cellPix(indCellValid(iC)).contourCell{1};
-        plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iCell, :)); hold on;
-end
-set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20])
 
-
-k = 4;
-[IDXdfl, C, SUMD] = kmeans(zscore(matAvgTS1)', k, 'Distance', 'correlation');
+k = 5;
+[IDXdfl, C, SUMD] = kmeans(zscore(matTS_norm')', k, 'Distance', 'correlation');
 [sortedIDXdfl, indCelldfl] = sort(IDXdfl);
 clear indCell_sort
 for iType = 1:k
     indCell_sort{iType} = indCelldfl(sortedIDXdfl==iType);
 end
+
+figure
+set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 340])
+imagesc(zscore(matTS_norm(indCelldfl, :)')')
+colormap(hot)
+set(gca, 'CLim', [-2 10])
+set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
+
 
 % 
 % Plotting
@@ -196,7 +207,7 @@ cMap_sort = hsv(k);
 % hold on;
 for iType = 1:k
     for iC = 1:size(indCell_sort{iType}, 1)
-        Coor = cellPix(indCellValid(indCell_sort{iType}(iC, 1))).contourCell{1};
+        Coor = cellPix(indCell_sort{iType}(iC, 1)).contourCell{1};
         plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :)); hold on;
     end
 end

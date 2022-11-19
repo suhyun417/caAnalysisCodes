@@ -8,35 +8,37 @@
 
 clear all;
 
-%% Settings
+%% settings
 flagBiowulf = 0; %1; %0;
 
 if flagBiowulf
     directory.dataHome = '/data/parks20/procdata/NeuroMRI/';
     dirFig = '/data/parks20/analysis/_figs';
-%     addpath('/data/parks20/analysis/NeuroMRI/'); % to use doConv.m function
 else
     ss = pwd;
     if ~isempty(strfind(ss, 'Volume')) % if it's local
-        directory.projects = '/Volumes/NIFVAULT/projects';
-        directory.procdata = '/Volumes/NIFVAULT/PROCDATA';
-        directory.dataHome = fullfile(directory.procdata, 'parksh', '_macaque');
-        directory.library = '/Volumes/NIFVAULT/LIBRARY';
-        addpath(fullfile(directory.library, 'matlab_utils'));
+        dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
+        dirProcdata = '/Volumes/NIFVAULT/PROCDATA/parksh';
+        dirRawdata = '/Volumes/rawdata/parksh';
     else % on virtual machine
-        directory.projects = '/nifvault/projects';
-        directory.procdata = '/nifvault/procdata';
-        directory.dataHome = fullfile(directory.procdata, 'parksh', '_macaque');
-        directory.library = '/nifvault/library';
-        addpath(fullfile(directory.library, 'matlab_utils'));
+        dirProjects = '/nifvault/projects/parksh';
+        dirProcdata = '/nifvault/procdata/parksh';
+        dirRawdata = '/nifvault/rawdata/parksh';
     end
 end
-dirFig = '/nifvault/projects/parksh/0Marmoset/Ca/_labNote/_figs';
+
+addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
+addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
+addpath(fullfile(dirProjects, '_toolbox/Fast_Tiff_Write/'));
+addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
+% gcp; % for parallel processingls
+
+dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1; %2; %1;
+iSubj = 2; %1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -45,6 +47,36 @@ FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
 [c, ia, indRun] = unique(infoSession.(1), 'sorted');
 setDateSession = c(2:end); % 1st one is always empty
 nSession = length(setDateSession);
+
+%% example time courses
+dateSession = setDateSession{1};
+dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+dirPreproc = fullfile(dirProcdata_session, '_preproc');
+
+load(fullfile(dirProcdata_session, 'DFL_ts.mat'))
+
+pnrs = max(tSeries_DFL(1).C, [], 2)./std(tSeries_DFL(1).C_raw-tSeries_DFL(1).C, 0, 2); % peak amplitude divided by noise std
+[a, ind] = sort(pnrs, 'descend');
+
+fig_movie = figure;
+set(fig_movie, 'Color', 'w')
+tlen = 1200;
+plot(tSeries_DFL(1).C_raw(ind(1:10), 1:tlen)'+repmat([1:10].*5, tlen, 1), 'LineWidth', 2)
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'XTick', 0:200:tlen, 'XTickLabel', 0:20:tlen/10, 'LineWidth', 2)
+print(fig_movie, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_DFL1_DFLpnr10', dateSession)), '-depsc')
+
+
+load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
+
+% pnrs = max(tSeries_BPM(1).C, [], 2)./std(tSeries_BPM(1).C_raw-tSeries_BPM(1).C, 0, 2); % peak amplitude divided by noise std
+% [a, ind] = sort(pnrs, 'descend');
+
+fig_BPM = figure;
+set(fig_BPM, 'Color', 'w')
+tlen = 1200;
+plot(tSeries_BPM(1).C_raw(ind(1:10), 21:20+tlen)'+repmat([1:10].*5, tlen, 1), 'LineWidth', 2)
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'XTick', 0:200:tlen, 'XTickLabel', 0:20:tlen/10, 'LineWidth', 2)
+print(fig_BPM, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_BPM1_DFLpnr10', dateSession)), '-depsc')
 
 
 %% load saved files
@@ -68,7 +100,11 @@ fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s
 load(fname_caTSFOV, 'cellTS', 'cellPix')
 
 fname_caTSFOV_RS = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_RSsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-load(fname_caTSFOV, 'cellTS_RS', 'resultsRS')
+load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
+
+% clustering results
+load('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/DFL_TS_clustering.mat', 'Clustering_all', 'paramClustering')
+
 
 %%
 indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
@@ -97,7 +133,132 @@ end
 [sortedScore, indCell] = sort(score(:,1), 'descend');
 [sortedScore2, indCell2] = sort(score(:,2), 'descend');
 
-explained(1:10)
+% explained(1:10)
+
+%% spatial map
+% all cells
+tempA = cat(2, cellPix(:).repPix);
+tempA(~isnan(tempA)) = 1;
+
+% selected cells
+% tempA = cat(2, cellPix(indCellValid).repPix);
+% tempA(~isnan(tempA)) = 1;
+% % tempA(:, indCellValid) = tempA(:, indCellValid).*10;
+
+imgCells = sum(tempA, 2, 'omitnan');
+imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
+
+figure;
+set(gcf, 'Color', 'w')
+imagesc(imgCells_2d)
+colormap(gray)
+set(gca, 'CLim', [0 0.5])
+truesize
+box off
+
+
+
+%% Population responses with clustering: Tabla's k=5 case
+% cells with more than 8 trials
+indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
+
+k = 5;
+[a, b] = min(sum(Clustering_all(iSubj).resultKMeans(k-1).cell_sumD))
+IDXdfl = Clustering_all(iSubj).resultKMeans(k-1).cell_indCluster(:, b);
+[sortedIDXdfl, indCelldfl] = sort(IDXdfl);
+clear indCell_sort
+for iType = 1:k
+indCell_sort{iType} = indCelldfl(sortedIDXdfl==iType);
+matTS_norm(:, iType) = mean(matAvgTS1(:, indCell_sort{iType}), 2)';
+end
+%
+
+figure;
+set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 340])
+imagesc(zscore(matAvgTS1(:, indCelldfl))')
+colormap(hot)
+set(gca, 'CLim', [-2 10])
+set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
+print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_matTS_neg1pos8'), '-r200', '-dtiff')
+
+figure;
+set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 200])
+plot(zscore(matTS_norm), 'LineWidth', 2)
+cMap_sort = hsv(k);
+cMap_sort(2,:) = [206 182 49]./255;
+colororder(cMap_sort)
+axis tight
+set(gca, 'XTickLabel', 20:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
+print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_avgTS_zscore'), '-depsc')
+
+
+figure;
+set(gcf, 'Color', 'w')
+cMap_sort = hsv(k);
+cMap_sort(2,:) = [206 182 49]./255
+% cMap_sort = [215 25 28; 253 174 97; 255 255 191; 171 217 233; 44 123 182]./255;
+% cMap_sort = [208 28 139; 241 182 218; 247 247 247; 184 225 134; 77 172 38]./255;
+[d1 d2] = size(infoCells(1).imgFOV);
+% imagesc(zeros(size(infoCells(1).imgFOV)));
+% colormap(gray)
+% imagesc(imgFOV);
+% colormap(sp(3), gray);
+% hold on;
+for iType = 1:k
+for iC = 1:size(indCell_sort{iType}, 1)
+Coor = cellPix(indCellValid(indCell_sort{iType}(iC, 1))).contourCell{1};
+plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :)); hold on;
+text(Coor(1,end), Coor(2,end), num2str(indCellValid(indCell_sort{iType}(iC, 1))), ...
+        'color', 'k')
+end
+end
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20]) %, 'Color', 'k', 'Box', 'off')
+set(gca, 'XTick', [], 'YTick', [])
+
+
+
+
+% Plotting
+fig_summary_DFL = figure;
+set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
+clear sp
+
+% 2. Clustering results on 2-d PC space
+figure(fig_summary_DFL);
+sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
+cMap_sort = hsv(k);
+for iType = 1:k
+plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
+hold on;
+end
+legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5', 'Cluster 6','Location', 'best')
+xlabel(sprintf('PC 1: explained %2.2f %% var', explained(1)))
+ylabel(sprintf('PC 2: explained %2.2f %% var', explained(2)))
+set(gca, 'TickDir', 'out')
+box off
+axis square
+title('Clustering based on movie response on PC space')
+% 3. Clustering results on imaging field of view
+figure(fig_summary_DFL);
+sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
+cMap_sort = hsv(k);
+[d1 d2] = size(infoCells(1).imgFOV);
+% imagesc(imgFOV);
+% colormap(sp(3), gray);
+% hold on;
+for iType = 1:k
+for iC = 1:size(indCell_sort{iType}, 1)
+Coor = cellPix(indCellValid(indCell_sort{iType}(iC, 1))).contourCell{1};
+plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :)); hold on;
+% text(Coor(1,end), Coor(2,end), num2str(indCell_sort{iType}(iC, 1)), ...
+%         'color', 'k')
+end
+end
+axis on
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20], 'Color', 'k')
+
+
+
 
 %% Read source data
 addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
@@ -163,81 +324,6 @@ for i = 1:size(Aor,2)
         plot(cont(1,1:end),cont(2,1:end),'Color',cmap(i+size(Aor,2),:), 'linewidth', ln_wd); hold on;
     end
 end
-
-
-%% Population responses with clustering
-load('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/', 'DFL_TS_clustering.mat', 'Clustering_all', 'paramClustering')
-
-
-iSubj = 2;
-
-k = 5;
-[a, b] = min(sum(Clustering_all(iSubj).resultKMeans(k-1).cell_sumD))
-IDXdfl = Clustering_all(iSubj).resultKMeans(k-1).cell_indCluster(:, b);
-[sortedIDXdfl, indCelldfl] = sort(IDXdfl);
-clear indCell_sort
-for iType = 1:k
-indCell_sort{iType} = indCelldfl(sortedIDXdfl==iType);
-end
-%
-% Plotting
-fig_summary_DFL = figure;
-set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
-clear sp
-
-% 2. Clustering results on 2-d PC space
-figure(fig_summary_DFL);
-sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
-cMap_sort = hsv(k);
-for iType = 1:k
-plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
-hold on;
-end
-legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5', 'Location', 'best')
-xlabel(sprintf('PC 1: explained %2.2f %% var', explained(1)))
-ylabel(sprintf('PC 2: explained %2.2f %% var', explained(2)))
-set(gca, 'TickDir', 'out')
-box off
-axis square
-title('Clustering based on movie response on PC space')
-% 3. Clustering results on imaging field of view
-figure(fig_summary_DFL);
-sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
-cMap_sort = hsv(k);
-[d1 d2] = size(infoCells(1).imgFOV);
-% imagesc(imgFOV);
-% colormap(sp(3), gray);
-% hold on;
-for iType = 1:k
-for iC = 1:size(indCell_sort{iType}, 1)
-Coor = cellPix(indCell_sort{iType}(iC, 1)).contourCell{1};
-plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :)); hold on;
-end
-end
-axis on
-set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20], 'Color', 'k')
-
-
-figure
-set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto')
-imagesc(zscore(matAvgTS1(:, indCelldfl))')
-colormap(hot)
-set(gca, 'CLim', [-2 10])
-set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
-
-%% Resting state    
-setSubj = {'Tabla', 1; 'Max', 3};
-
-iSubj = 1; %2; %1;
-
-nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
-FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
-
-fname_caTSFOV_RS = fullfile(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_RSsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
-
-
-
 
 
 

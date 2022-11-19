@@ -127,13 +127,13 @@ for iC = 1:length(indCellValid)
         
     
     axes(sp(2));
-    imagesc(cellTS(iCell).matTS_movie1);
+    imagesc(zscore(cellTS(iCell).matTS_movie1, 0, 2));
     %     set(gca, 'XTickLabel', 20:20:120, 'YTick', cellTS(iCell).nTrial1_set , 'YTickLabel', setDateSession(cellTS(iCell).idAcrossSession(:,1)),'TickDir', 'out', 'Box', 'off')
     title(sprintf('Cell %d/%d: Mov 1', iCell, length(cellTS)))
     %     colormap(hot)
     
     axes(sp(3));
-    imagesc(cellTS(iCell).matTS_movie2);
+    imagesc(zscore(cellTS(iCell).matTS_movie2, 0, 2));
     %     set(gca, 'XTickLabel', 20:20:120, 'YTick', cellTS(iCell).nTrial2_set, 'YTickLabel', setDateSession(cellTS(iCell).idAcrossSession(:,1)),'TickDir', 'out', 'Box', 'off')
     title('Mov 2')
     xlabel('Time (s)')
