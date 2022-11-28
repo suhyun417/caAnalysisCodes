@@ -39,7 +39,7 @@ dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1; %2; %1; %2; %1;
+iSubj = 2; %1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -53,17 +53,17 @@ nSession = length(setDateSession);
 %% load saved files
 % cells pooled across days
 fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellAcrossDay.mat',...
-    nameSubj, FOV_ID, nameSubj, FOV_ID)); 
+    nameSubj, FOV_ID, nameSubj, FOV_ID));
 load(fname_stack, 'cellIDAcrossDay'); %, 'stackCellCenter')
 
-% cell quality info 
+% cell quality info
 fname_cellQC = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellQC.mat',...
-    nameSubj, FOV_ID, nameSubj, FOV_ID)); 
+    nameSubj, FOV_ID, nameSubj, FOV_ID));
 load(fname_cellQC, 'infoCells')
 
 % translational shift across days
 fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_shifts.mat',...
-    nameSubj, FOV_ID, nameSubj, FOV_ID));  
+    nameSubj, FOV_ID, nameSubj, FOV_ID));
 load(fname_shifts, 'shifts')
 
 % aligned cells TS and spatial info
@@ -74,27 +74,143 @@ fname_caTSFOV_RS = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging
 load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
 
 %%
-indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
+indCellValid = find(cat(1, cellTS.nTrial1_total)>8); %
 % % indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
-% % 
+% %
 % for ii = 1:length(cellTS)
 %     minsnrmovie1(ii, 1) = min(cellTS(ii).snr_movie1);
 % end
-% 
-% % indCellValid_snr = find(minsnrmovie1>0.1);   
-% 
+%
+% % indCellValid_snr = find(minsnrmovie1>0.1);
+%
 % % indCellValid = intersect(indCellValid_trial, indCellValid_snr);
-% 
+%
 % clear matAvg*
-% for iCell = 1:length(indCellValid)   
-%     
+% for iCell = 1:length(indCellValid)
+%
 %     matAvgTS1(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie1)'; % now it's scaled dF
 %     matAvgTS2(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie2)'; %
-%     
+%
 %     steAvgTS1(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie1)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie1, 1)-1))'; % now it's scaled dF
-%     steAvgTS2(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie2)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie2, 1)-1))'; 
-% 
+%     steAvgTS2(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie2)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie2, 1)-1))';
+%
 % end
+
+%% Okay, let's try it in a cell-by-cell way
+%%%%% build the colormap b-w-r
+cval = 0.6;
+cmin = -cval; cmax = cval;
+colornum = 256;
+colorInput = [0 0 1; 1 1 1; 1 0 0];
+oldSteps = linspace(-1, 1, length(colorInput));
+newSteps = linspace(-1, 1, colornum);
+for j=1:3 % RGB
+    newmap_all(:,j) = min(max(transpose(interp1(oldSteps, colorInput(:,j), newSteps)), 0), 1);
+end
+endPoint = round((cmax-cmin)/2/abs(cmin)*colornum);
+cMap_bwr = squeeze(newmap_all(1:endPoint, :));
+
+% compute RS pairwise corr for all the sessions
+for iS = 1:length(resultsRS)
+    [matR, matP] = corr(resultsRS(iS).C_raw', 'type', 'Spearman');
+    resultsCorr(iS).matR = matR;
+end
+
+
+indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); %
+
+% figMap_RS = figure;
+% set(figMap_RS, 'Color', 'w', 'Position', [290 680 1940 820]);
+
+for iC_trial = 1:length(indCellValid_trial)
+    
+    iCCell = indCellValid_trial(iC_trial);
+    
+    curCells_session = find(~isnan(cellIDAcrossDay(iCCell, :)));
+    curCells_id = cellIDAcrossDay(iCCell, curCells_session);
+    
+    figMap_RS = figure;
+    set(figMap_RS, 'Color', 'w', 'Position', [290 680 1940 820]);
+%     figure(figMap_RS); clf;
+    set(figMap_RS, 'Name', sprintf('%s: Cell %d/%d: cell ID: %d', nameSubj, iC_trial, length(indCellValid_trial), iCCell))
+    nSP = length(curCells_id);
+    nRow = 2;
+    nCol = ceil(nSP./nRow);
+    
+    for iSetCell = 1:length(curCells_id)
+        
+        
+        %     [matR, matP] = corr(resultsRS(curCells_session(iSetCell)).C_raw', 'type', 'Spearman');
+        curMatR = resultsCorr(curCells_session(iSetCell)).matR(:,curCells_id(iSetCell));
+        
+        validCell = intersect(intersect(infoCells(curCells_session(iSetCell)).indCellValid_spatialCluster_0p2, infoCells(curCells_session(iSetCell)).indCellValid_fov), ...
+            infoCells(curCells_session(iSetCell)).indCellValid_snr);
+        validCell_ex = setxor(validCell, curCells_id(iSetCell)); % except for the self
+        
+        %     % Distribution of correlation values & representational statistics
+        %     fig_corr = figure;
+        %     set(gcf, 'Color', 'w')
+        %     histogram(curMatR(validCell_ex))
+        %     xlim([-1 1]);
+        %     line([median(curMatR(validCell_ex)) median(curMatR(validCell_ex))], get(gca, 'YLim'), 'Color', 'r')
+        %     text(median(curMatR(validCell_ex))+0.1, max(get(gca, 'YLim'))-5, sprintf('median = %1.2f', median(curMatR(validCell_ex))), 'Color', 'r')
+        %     title(sprintf('Resting State corr: %s session%d Cell%d', nameSubj, curCells_session(iSetCell), curCells_id(iSetCell)))
+        
+        % figure;
+        % imagesc(matR)
+        % colormap(jet)
+        % set(gca, 'CLim', [-1 1].*0.6)
+        
+        
+        %%%%% then assign colors based on the correlations
+        
+        % Convert correlation value to a scaled index given the current color axis
+        matColorIndex = max(min(fix(((curMatR - cmin)./(cmax-cmin)*256)+1), 256), 1); % saturating it to cmax and cmin
+        %     matColorIndex(matColorIndex > 256) = 256; % saturating it to maximum if it's larger than cmax
+        %     matColorIndex(matColorIndex < 0) = 0; % saturating it to maximum if it's larger than cmax
+        
+        %     figMap_RS = figure;
+        %     set(figMap_RS, 'Color', 'w')
+        for iCell = 1:length(validCell)
+            
+            idCurCell = validCell(iCell);
+            lw = 2;
+            if idCurCell == curCells_id(iSetCell)
+                lw = 4;
+            end
+            
+            figure(figMap_RS);
+            subplot(nRow, nCol, iSetCell);
+            plot(infoCells(curCells_session(iSetCell)).cellCenter(idCurCell,2)+shifts(curCells_session(iSetCell),1), ...
+                infoCells(curCells_session(iSetCell)).cellCenter(idCurCell,1)++shifts(curCells_session(iSetCell),2), 'o',...
+                'MarkerSize', 8, 'LineWidth', lw, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', cMap_bwr(matColorIndex(idCurCell), :));
+            hold on;
+        end
+        [d1 d2] = size(infoCells(1).imgFOV);
+        axis equal
+        set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20]);
+        title(sprintf('Resting State corr: %s session%d Cell%d', nameSubj, curCells_session(iSetCell), curCells_id(iSetCell)))
+        
+    end
+        
+end
+
+% save figures
+flagSavePPTX = 1;
+if flagSavePPTX
+    addpath(fullfile(dirProjects, '/_toolbox/exportToPPTX/'));
+    addpath(fullfile(dirProjects, '/_toolbox/imagetools/'));
+    
+    fname_pptx = sprintf('%s_FOV%d_RestingStateCorrMaps', nameSubj, FOV_ID); % fullfile('procdata/parksh/_marmoset/invivoCalciumImaging/', nameSubj, 'FOV1', sprintf('%s.pptx', dateSession));
+    exportFigsToPPTX(fname_pptx);
+    
+    movefile('./*.pptx', dirFig);
+end
+
+
+
+%%%%% compare the maps across sessions: make a matrix and stack them across
+%%%%% sessions (gaussian blur etc.)
 
 
 %%
@@ -129,9 +245,9 @@ legend('PC1', 'PC2', 'PC3')
 % figure;
 % cMap_sort = jet(length(indCell)); %jet(length(indCell)); %hsv(k);
 % % cMap_sort = autumn(20);
-% 
+%
 % [d1 d2] = size(infoCells(1).imgFOV);
-% % imagesc(imgFOV); 
+% % imagesc(imgFOV);
 % % colormap(sp(3), gray);
 % % hold on;
 % for iCell = 1:length(indCell)
@@ -158,12 +274,12 @@ set(gca, 'CLim', [-2 10])
 set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
 
 
-% 
+%
 % Plotting
 fig_summary_DFL = figure;
 set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
 clear sp
-% 
+%
 % % 1. averaged amplitude for each condition
 % figure(fig_summary_DFL);
 % sp(1) = subplot('Position', [0.2 0.65 0.75 0.3]);
@@ -178,15 +294,15 @@ clear sp
 % title(sprintf('%s %s: averaged response to movie %s', nameSubj, dateSession, tS_session(iMovie).idStim))
 % ylabel('Cells (sorted)')
 % xlabel('Time (s)')
-% 
+%
 % 2. Clustering results on 2-d PC space
 figure(fig_summary_DFL);
 sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
 cMap_sort = hsv(k);
 
 for iType = 1:k
-        plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
-        hold on;
+    plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
+    hold on;
 end
 legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5', 'Location', 'best')
 xlabel(sprintf('PC 1: explained %2.2f %% var', explained(1)))
@@ -202,7 +318,7 @@ sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
 cMap_sort = hsv(k);
 
 [d1 d2] = size(infoCells(1).imgFOV);
-% imagesc(imgFOV); 
+% imagesc(imgFOV);
 % colormap(sp(3), gray);
 % hold on;
 for iType = 1:k
@@ -243,7 +359,7 @@ opts = statset('Display','final');
 numRepeat = 100;
 for iK = 1:length(setK)
     
-    K = setK(iK);                
+    K = setK(iK);
     
     % max of abs
     cell_indCluster = NaN(size(matAvgTS1, 2), numRepeat);
@@ -251,7 +367,7 @@ for iK = 1:length(setK)
     
     time_indCluster = NaN(size(matAvgTS1, 1), numRepeat);
     time_sumD = NaN(K, numRepeat);
-
+    
     for iRep = 1:numRepeat
         
         fprintf(1, ':: K = %d; maxabs ::\n', K);
@@ -271,12 +387,12 @@ for iK = 1:length(setK)
         time_sumD(:, iRep) = SUMD_time;
         
     end
-
+    
     Clustering.resultKMeans(iK).cell_indCluster = cell_indCluster;
     Clustering.resultKMeans(iK).cell_sumD = cell_sumD;
     Clustering.resultKMeans(iK).time_indCluster = time_indCluster;
     Clustering.resultKMeans(iK).time_sumD = time_sumD;
-
+    
 end
 
 paramClustering.methods = 'KMeans using Correlation distance';
@@ -292,17 +408,17 @@ matWSS=[];
 matExpVar=[];
 for iK = 1:length(setK)
     curK = setK(iK);
-%     indClust = Clustering_moviemask_valid.resultKMeans(iK).SU_indCluster; %Clustering.resultKMeans(iK).SU_indCluster;
-%     [sortedClust, indSortedChan]=sort(indClust);
+    %     indClust = Clustering_moviemask_valid.resultKMeans(iK).SU_indCluster; %Clustering.resultKMeans(iK).SU_indCluster;
+    %     [sortedClust, indSortedChan]=sort(indClust);
     
-%     tExpVar=[];
-%     for ii = 1:curK
-%         tExpVar(ii,1) = Clustering.resultKMeans(iK).SU_sumD(ii)/(2*sum(sortedClust==ii));
-%     end
+    %     tExpVar=[];
+    %     for ii = 1:curK
+    %         tExpVar(ii,1) = Clustering.resultKMeans(iK).SU_sumD(ii)/(2*sum(sortedClust==ii));
+    %     end
     
     matWSS(:,iK) = sum(Clustering.resultKMeans(iK).cell_sumD); %sum(Clustering.resultKMeans(iK).SU_sumD);
-%     matExpVar(iK,1) = sum(tExpVar);
-
+    %     matExpVar(iK,1) = sum(tExpVar);
+    
 end
 
 totalSS = Clustering.totalSS_cell;
@@ -342,7 +458,7 @@ ylabel('Within-cluster distance')
 
 %%
 % clear all;
-% 
+%
 % ss = pwd;
 % if ~isempty(strfind(ss, 'Volume')) % if it's local
 %     dirProjects = '/Volumes/NIFVAULT/projects/parksh';
@@ -353,59 +469,59 @@ ylabel('Within-cluster distance')
 %     dirProcdata = '/nifvault/procdata/parksh';
 %     dirRawdata = '/nifvault/rawdata/parksh';
 % end
-% 
+%
 % % setNameSubj = {'Tabla', 'Max'};
 % flagSavePPTX = 0; %1;
-% 
+%
 % % get session info
 % nameSubj = 'Tabla';
 % FOV_ID = 1;
 % [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
-% 
+%
 % [c, ia, indRun] = unique(infoSession.(1), 'sorted');
 % setDateSession = c(2:end); % 1st one is always empty
 % nSession = length(setDateSession);
-% 
+%
 % for iSession = 1:nSession
-% % iSession = 1; 
+% % iSession = 1;
 % dateSession = setDateSession{iSession}; %'20191113'; %setDateSession{iSession};
-% 
+%
 % dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
 % dirPreproc = fullfile(dirProcdata_session, '_preproc');
-% 
+%
 % dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
-% 
-% 
+%
+%
 % %% Read source data
 % addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
 % cnmfe_setup;
 % d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
-% 
+%
 % load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
-% 
+%
 % validIndCell = [];
 % validIndCell(:,1) = 1:length(neuron.ids);
 % if strcmpi(nameSubj, 'max')
 %     load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
 %     validIndCell = indCell.validCell;
 % end
-% 
-% 
+%
+%
 % % get the contours and image field of view
 % % neuron_b = neuron.batches{1}.neuron;
-% 
+%
 % % Generate cell location map within FOV
 % thr = 0.5; % the lower the smaller (more centralized) the contour
 % cellColor = [1 1 1];
 % widthContour = 1;
 % [d1,d2] = size(neuron.Cn);
-% 
+%
 % figure;
 % imagesc(zeros(d1, d2)); % background
 % colormap(gray);
 % caxis([0 0.1]);
 % hold on;
-% 
+%
 % CC = cell(size(neuron.A, 2),1);
 % CR = cell(size(neuron.A, 2),2);
 % for i = 1:size(neuron.A ,2)
@@ -428,15 +544,15 @@ ylabel('Within-cluster distance')
 % title(sprintf('%s: %s', nameSubj, dateSession))
 % % %save
 % % print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
-% 
+%
 % % end
 % %
 % Coor = neuron.get_contours(thr); % Coor = get_contours(obj, thr, ind_show); % ind_show: indices of cells you want to get contours
 % imgFOV = neuron.Cn.*neuron.PNR;
-% 
+%
 % % % draw all the contours
 % % neuron_b.show_contours([], [], imgFOV, 'true');
-% 
+%
 % figure
 % [center] = neuron.estCenter();
 % center = center(validIndCell, :);
@@ -445,19 +561,19 @@ ylabel('Within-cluster distance')
 % plot(center(:,2), center(:, 1), 'r.')
 % text(center(:,2)+1, center(:,1), num2str([1:size(center,1)]'), 'Color', 'w');
 % axis off
-% 
-% 
+%
+%
 % %% Cell quality check using SNR and PNR
 % snrs = var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2);
 % pnrs = max(neuron.C, [], 2)./std(neuron.C_raw-neuron.C, 0, 2);
-% 
+%
 % snrs = snrs(validIndCell);
 % pnrs = pnrs(validIndCell);
-% 
+%
 % [a, sortedID_snr] = sort(snrs, 'descend');
 % [aa, sortedID_pnr] = sort(pnrs, 'descend');
-% 
-% % SNR distribution 
+%
+% % SNR distribution
 % figure
 % histogram(snrs, 30)
 % median(snrs)
@@ -465,7 +581,7 @@ ylabel('Within-cluster distance')
 % xlabel('SNR')
 % title(sprintf('%s: %s', nameSubj, dateSession))
 % line([median(snrs) median(snrs)], get(gca, 'ylim'), 'Color', 'r')
-% 
+%
 % % Location of a particular set cells
 % setCells_rank = 1:10; %length(sortedID_pnr)-9:length(sortedID_pnr); %1:10
 % figure;
@@ -478,8 +594,8 @@ ylabel('Within-cluster distance')
 % text(center(sortedID_pnr(setCells_rank), 2)+3, center(sortedID_pnr(setCells_rank), 1)+3, num2str([setCells_rank]'), 'Color', 'g');
 % plot(center(sortedID_pnr(setCells_rank), 2), center(sortedID_pnr(setCells_rank), 1), 'g.')
 % axis off
-% 
-% 
+%
+%
 % tY=[];
 % nCell = 10;
 % nTime = 1000;
@@ -494,7 +610,7 @@ ylabel('Within-cluster distance')
 % set(gca, 'XTick', 200:200:nTime,  'XTickLabel', [200:200:nTime]./10);
 % xlabel('Time (s)')
 % ylabel('Cell order')
-% 
+%
 % tY=[];
 % nCell = 10;
 % nTime = 1000;
@@ -509,8 +625,8 @@ ylabel('Within-cluster distance')
 % set(gca, 'XTick', 200:200:nTime,  'XTickLabel', [200:200:nTime]./10);
 % xlabel('Time (s)')
 % ylabel('Cell order')
-% 
-% 
+%
+%
 % tY=[];
 % nCell = 10;
 % nTime = 1000;
@@ -520,33 +636,33 @@ ylabel('Within-cluster distance')
 % plot(neuron.C_raw(validIndCell(sortedID_pnr(iCell)), 1:nTime)+3*(iCell-1), '-', 'LineWidth', 2)
 % end
 % set(gca, 'XTick', 200:200:nTime,  'XTickLabel', [200:200:nTime]./10);
-% 
-% 
-% 
+%
+%
+%
 % %% Movie-driven signal
 % load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', nameSubj, dateSession))
-% 
+%
 % % snrs = var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2);
 % % pnrs = max(neuron.C, [], 2)./std(neuron.C_raw-neuron.C, 0, 2);
-% % 
+% %
 % % [a, sortedID_snr] = sort(snrs, 'descend');
 % % [aa, sortedID_pnr] = sort(pnrs, 'descend');
-% 
-% setCell = 1:10; %length(sortedID_pnr)-9:length(sortedID_pnr); %1:10; %11:20; %10; 
+%
+% setCell = 1:10; %length(sortedID_pnr)-9:length(sortedID_pnr); %1:10; %11:20; %10;
 % tY = []; ttY = [];
 % figMovie_snr = figure;
 % set(figMovie_snr, 'Position', [675    31   660   930], 'name', sprintf('%s %s: PNR based sorting', nameSubj, dateSession))
 % SP(1) = subplot(1,2,1);
 % SP(2) = subplot(1,2,2);
 % hold(SP(:), 'on');
-% 
+%
 % for iCell = 1:length(setCell)
 %     idCell = setCell(iCell);
 %     figure(figMovie_snr);
-%     plot(SP(1), squeeze(tS_session(1).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1), '-'); 
+%     plot(SP(1), squeeze(tS_session(1).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1), '-');
 %     tY(iCell) = mean(mean(squeeze(tS_session(1).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1)));
-%     
-%     plot(SP(2), squeeze(tS_session(2).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1), '-'); 
+%
+%     plot(SP(2), squeeze(tS_session(2).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1), '-');
 %     ttY(iCell) = mean(mean(squeeze(tS_session(2).matTS(:, validIndCell(sortedID_snr(idCell)), :))+10*(iCell-1)));
 % end
 % set(SP, 'YTick', tY, 'YTickLabel', setCell, 'TickDir', 'out')
@@ -556,24 +672,24 @@ ylabel('Within-cluster distance')
 % ylabel(SP(1), 'Cell')
 % title(SP(1), 'Movie 1')
 % title(SP(2), 'Movie 2')
-% 
+%
 % %pnr
-% setCell = 1:10; %length(sortedID_pnr)-9:length(sortedID_pnr);  %1:10; %11:20; %10; 
+% setCell = 1:10; %length(sortedID_pnr)-9:length(sortedID_pnr);  %1:10; %11:20; %10;
 % tY = []; ttY = [];
 % figMovie_pnr = figure;
 % set(figMovie_pnr, 'Position', [675    31   660   930], 'name', sprintf('%s %s: PNR based sorting', nameSubj, dateSession))
 % SP(1) = subplot(1,2,1);
 % SP(2) = subplot(1,2,2);
 % hold(SP(:), 'on');
-% 
+%
 % scalefac = 10;
 % for iCell = 1:length(setCell)
 %     idCell = setCell(iCell);
 %     figure(figMovie_pnr);
-%     plot(SP(1), squeeze(tS_session(1).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1), '-'); 
+%     plot(SP(1), squeeze(tS_session(1).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1), '-');
 %     tY(iCell) = mean(mean(squeeze(tS_session(1).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1)));
-%     
-%     plot(SP(2), squeeze(tS_session(2).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1), '-'); 
+%
+%     plot(SP(2), squeeze(tS_session(2).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1), '-');
 %     ttY(iCell) = mean(mean(squeeze(tS_session(2).matTS(:, validIndCell(sortedID_pnr(idCell)), :))+scalefac*(iCell-1)));
 % end
 % set(SP, 'YTick', tY, 'YTickLabel', setCell, 'TickDir', 'out')
@@ -583,22 +699,22 @@ ylabel('Within-cluster distance')
 % ylabel(SP(1), 'Cell')
 % title(SP(1), 'Movie 1')
 % title(SP(2), 'Movie 2')
-% 
-% 
+%
+%
 % %% pupil size change
 % % part of eye data is not great. decided to focus on the later half of the
 % % first movie, which contains body motion, object motion, face
-% 
+%
 %     % get session info
 %     [infoSession, opts] = readInfoSession(nameSubj);
 %     S = table2struct(infoSession);
-%     
+%
 %     % setExpName = {S.ExpName}';
 %     setMLFilename = {S.MLFilename}';
-%     
+%
 %     indDFLRuns = contains(setMLFilename, 'DFL') & cat(1, S.flagPreproc) > 0 & contains({S.stimulus}', 'set1_1'); %% containing "DFL" in filename AND flagPreproc value of 1
 %     setFilename = setMLFilename(indDFLRuns);
-%     
+%
 %     % Tabla
 %     % 191113: eye signal not good (another range of x/y/pupil present during the first half)
 %     % 191114 & 191118: eye signal good. Length of data points are 6-7ms shorter than 2min
@@ -608,33 +724,33 @@ ylabel('Within-cluster distance')
 %     % others
 %     % 191121: x is lost, length of data points are 6-7ms shorter than 2min, y
 %     % & pupil bad in some runs
-%    % 191125: x is lost, for the first file signals look okay & length is fine 
-%    
-%     
+%    % 191125: x is lost, for the first file signals look okay & length is fine
+%
+%
 %     for iFile = 1:length(setFilename)
 %         filename = strcat(setFilename{iFile}, '.bhv2');
-%         
+%
 %         dateSession = filename(1:6);
-%         
+%
 %         if str2num(dateSession) < 191121
 %             dirBHV = '/archive_rawdata1/parksh/behavior/MonkeyLogic_Ca/'; %
 %         else
 %             dirBHV = '/rawdata/parksh/behavior/MonkeyLogic_Ca/'; %
 %         end
-%         
+%
 %         % filename = '191121_Tabla_Ca_BPM_123909.bhv2'; % change it to a file you have
-%         
+%
 %         %% Read the file
 %         data = mlread(fullfile(dirBHV, filename)); % mlread(filename);
-%         
-%         %% eye data during stimulus on 
+%
+%         %% eye data during stimulus on
 %         % Event Code Numbers & Names : TASK_START = 10; FP_ON = 20;
-%         % WAIT_FOR_TR = 30; MOVIE_ON = 40; REWARD = 90; 
+%         % WAIT_FOR_TR = 30; MOVIE_ON = 40; REWARD = 90;
 %         % TRIG onset = 900; TRIG offset = 990; (TTL from ML to Inscopix DAQ On & Off)
 %         locStimOn = find(data.BehavioralCodes.CodeNumbers == 40);
 %         time_stimOn = floor(data.BehavioralCodes.CodeTimes(locStimOn))
 % %         data.AnalogData
-%         
+%
 %         figure;
 %         plot(data.AnalogData.Eye, '.')
 %         line([time_stimOn time_stimOn], get(gca, 'YLim'), 'Color', 'm')
@@ -643,7 +759,7 @@ ylabel('Within-cluster distance')
 %         xlabel('Time')
 %         ylabel('Voltage')
 %         legend('X', 'Y')
-%         
+%
 %         figure;
 %         plot(data.AnalogData.General.Gen1, 'g.')
 %         line([time_stimOn time_stimOn], get(gca, 'YLim'), 'Color', 'm')
@@ -651,7 +767,7 @@ ylabel('Within-cluster distance')
 %         axis tight
 %         xlabel('Time')
 %         ylabel('Voltage')
-%         
+%
 %         input('')
 %     end
 % tempP = data.AnalogData.General.Gen1((time_stimOn:end));
@@ -672,14 +788,14 @@ ylabel('Within-cluster distance')
 % ts = struct([]);
 % iMovie = 1;
 % for iCell = 1:size(tS_session(iMovie).avgTS, 2)
-%     
+%
 %     curMatTS = squeeze(tS_session(iMovie).matTS_norm(:,iCell,:));
 %     avgMatTS = tS_session(iMovie).avgTS_norm(:,iCell);
 %     steMatTS = std(curMatTS, [], 2)./sqrt(size(curMatTS, 2)-1);
-%     
+%
 %     ts(iCell).avgMatTS = avgMatTS;
 %     ts(iCell).steMatTS = steMatTS;
-%     
+%
 %     % figure(100);clf;
 %     % subplot(2,1,1)
 %     % plot(curMatTS); axis tight
@@ -687,16 +803,16 @@ ylabel('Within-cluster distance')
 %     % subplot(2,1,2)
 %     % plot(avgMatTS, 'k'); axis tight
 %     % line(repmat(1:length(avgMatTS), 2, 1), cat(2, avgMatTS+steMatTS, avgMatTS-steMatTS)', 'Color', 'c')
-%     
+%
 %     % input('')
 % end
-% 
+%
 % % %% Consistency across trials
 % catAvgMatTS = cat(2, ts.avgMatTS); % driven activity, averaged across trials
 % catSteMatTS = cat(2, ts.steMatTS);
-% 
+%
 % [coeff, score, latent, tsquared, explained] = pca(catAvgMatTS');
-% 
+%
 % k = 4;
 % [IDXdfl, C, SUMD] = kmeans(catAvgMatTS', k, 'Distance', 'correlation');
 % [sortedIDXdfl, indCelldfl] = sort(IDXdfl);
@@ -704,12 +820,12 @@ ylabel('Within-cluster distance')
 % for iType = 1:k
 %     indCell_sort{iType} = indCelldfl(sortedIDXdfl==iType);
 % end
-% 
+%
 % % Plotting
 % fig_summary_DFL = figure;
 % set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
 % clear sp
-% 
+%
 % % 1. averaged amplitude for each condition
 % figure(fig_summary_DFL);
 % sp(1) = subplot('Position', [0.2 0.65 0.75 0.3]);
@@ -724,12 +840,12 @@ ylabel('Within-cluster distance')
 % title(sprintf('%s %s: averaged response to movie %s', nameSubj, dateSession, tS_session(iMovie).idStim))
 % ylabel('Cells (sorted)')
 % xlabel('Time (s)')
-% 
+%
 % % 2. Clustering results on 2-d PC space
 % figure(fig_summary_DFL);
 % sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
 % cMap_sort = hsv(k);
-% 
+%
 % for iType = 1:k
 %         plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
 %         hold on;
@@ -741,13 +857,13 @@ ylabel('Within-cluster distance')
 % box off
 % axis square
 % title('Clustering based on movie response on PC space')
-% 
+%
 % % 3. Clustering results on imaging field of view
 % figure(fig_summary_DFL);
 % sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
 % cMap_sort = hsv(k);
-% 
-% imagesc(imgFOV); 
+%
+% imagesc(imgFOV);
 % colormap(sp(3), gray);
 % hold on;
 % for iType = 1:k
@@ -756,22 +872,22 @@ ylabel('Within-cluster distance')
 %     end
 % end
 % axis off
-% 
+%
 % % % for each run
 % % fig_map = figure;
 % % for iRun = 1:length(tSeries_DFL)
 % % matTSnorm = zscore(tSeries_DFL(iRun).C_raw');
-% % 
+% %
 % % k = 5;
 % % [IDX, C, SUMD] = kmeans(matTSnorm', k, 'Distance', 'correlation');
 % % [sortedIDX, indCell] = sort(IDX);
-% % 
-% % 
+% %
+% %
 % % clear indCell_sort
 % % for iType = 1:k
 % %     indCell_sort{iType} = indCell(sortedIDX==iType);
 % % end
-% % 
+% %
 % % cMap_sort = hsv(k);
 % % figure(fig_map);
 % % subplot(1,length(tSeries_DFL),iRun);
@@ -785,19 +901,19 @@ ylabel('Within-cluster distance')
 % %     end
 % % end
 % % title(sprintf('DFL Run #%d', iRun))
-% % 
+% %
 % % end
-% 
+%
 % % end
-% 
+%
 % % if flagSavePPTX
 % %     % save figures
 % %     addpath(fullfile(dirProjects, '/_toolbox/exportToPPTX/'));
 % %     addpath(fullfile(dirProjects, '/_toolbox/imagetools/'));
-% %     
+% %
 % %     fname_pptx = sprintf('%s_ClusteringBPMDFL', nameSubj); % fullfile('procdata/parksh/_marmoset/invivoCalciumImaging/', nameSubj, 'FOV1', sprintf('%s.pptx', dateSession));
 % %     exportFigsToPPTX(fname_pptx);
-% %     
+% %
 % % %     switch lower(nameSubj)
 % % %         case 'tabla'
 % % %             dest = '/procdata/parksh/_marmoset/invivoCalciumImaging/Tabla/FOV1';
@@ -806,10 +922,10 @@ ylabel('Within-cluster distance')
 % % %     end
 % %     movefile('./*.pptx', dirFig);
 % % end
-% 
+%
 % % end
-% 
-% 
-% 
+%
+%
+%
 
 

@@ -38,7 +38,7 @@ dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 2; %1; %2; %1; %2; %1;
+iSubj = 1; %2; %1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -150,11 +150,14 @@ imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
 
 figure;
 set(gcf, 'Color', 'w')
+subplot('Position', [0 0 1 1])
 imagesc(imgCells_2d)
 colormap(gray)
 set(gca, 'CLim', [0 0.5])
 truesize
 box off
+axis off
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellMap_allCells_truesize', nameSubj, FOV_ID)), '-depsc')
 
 
 
