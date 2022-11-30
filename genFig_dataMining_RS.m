@@ -17,9 +17,9 @@ if flagBiowulf
 else
     ss = pwd;
     if ~isempty(strfind(ss, 'Volume')) % if it's local
-        dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
-        dirProcdata = '/Volumes/NIFVAULT/PROCDATA/parksh';
-        dirRawdata = '/Volumes/rawdata/parksh';
+        dirProjects = '/Volumes/NIFVAULT/projects/parksh';
+        dirProcdata = '/Volumes/NIFVAULT/procdata/parksh';
+        dirRawdata = '/Volumes/NIFVAULT/rawdata/parksh';
     else % on virtual machine
         dirProjects = '/nifvault/projects/parksh';
         dirProcdata = '/nifvault/procdata/parksh';
@@ -39,7 +39,7 @@ dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 2; %1; %2; %1; %2; %1;
+iSubj = 1; %2; %1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -196,7 +196,7 @@ for iC_trial = 1:length(indCellValid_trial)
 end
 
 % save figures
-flagSavePPTX = 1;
+flagSavePPTX = 0; %1;
 if flagSavePPTX
     addpath(fullfile(dirProjects, '/_toolbox/exportToPPTX/'));
     addpath(fullfile(dirProjects, '/_toolbox/imagetools/'));
@@ -211,6 +211,114 @@ end
 
 %%%%% compare the maps across sessions: make a matrix and stack them across
 %%%%% sessions (gaussian blur etc.)
+
+
+
+%% Resting state vs. movie-driven
+indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); %
+
+% compute movie-
+for iS = 1:length(setDateSession)
+    dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+    dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+    load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
+    
+%     resultsDFL(iS).tS_session = tS_session;
+    
+    [matR, matP] = corr(tS_session(1).avgTS_C_raw_zscore, 'type', 'Spearman');
+    resultsCorr_DFL(iS).matR = matR;
+end
+
+for iC_trial = 1:length(indCellValid_trial)
+%     iC_trial = 1;
+    
+    iCCell = indCellValid_trial(iC_trial);
+    
+    curCells_session = find(~isnan(cellIDAcrossDay(iCCell, :)));
+    curCells_id = cellIDAcrossDay(iCCell, curCells_session);
+    
+    for iSetCell = 1:length(curCells_id)
+%         iSetCell = 1;
+        
+        
+        %     [matR, matP] = corr(resultsRS(curCells_session(iSetCell)).C_raw', 'type', 'Spearman');
+        curMatR = resultsCorr(curCells_session(iSetCell)).matR(:,curCells_id(iSetCell));
+        
+        validCell = intersect(intersect(infoCells(curCells_session(iSetCell)).indCellValid_spatialCluster_0p2, infoCells(curCells_session(iSetCell)).indCellValid_fov), ...
+            infoCells(curCells_session(iSetCell)).indCellValid_snr);
+        validCell_ex = setxor(validCell, curCells_id(iSetCell)); % except for the self
+        
+        %     % Distribution of correlation values & representational statistics
+        %     fig_corr = figure;
+        %     set(gcf, 'Color', 'w')
+        %     histogram(curMatR(validCell_ex))
+        %     xlim([-1 1]);
+        %     line([median(curMatR(validCell_ex)) median(curMatR(validCell_ex))], get(gca, 'YLim'), 'Color', 'r')
+        %     text(median(curMatR(validCell_ex))+0.1, max(get(gca, 'YLim'))-5, sprintf('median = %1.2f', median(curMatR(validCell_ex))), 'Color', 'r')
+        %     title(sprintf('Resting State corr: %s session%d Cell%d', nameSubj, curCells_session(iSetCell), curCells_id(iSetCell)))
+        
+        % figure;
+        % imagesc(matR)
+        % colormap(jet)
+        % set(gca, 'CLim', [-1 1].*0.6)
+        
+        
+        %%%%% then assign colors based on the correlations
+        
+        % Convert correlation value to a scaled index given the current color axis
+        matColorIndex = max(min(fix(((curMatR - cmin)./(cmax-cmin)*256)+1), 256), 1); % saturating it to cmax and cmin
+
+        figMap_RS_DFL = figure;
+        set(figMap_RS_DFL, 'Color', 'w', 'Position', [1700 600 1050 450])
+        sp(1) = subplot('Position', [0.05 0.1 0.4 0.8]);
+        sp(2) = subplot('Position', [0.55 0.1 0.4 0.8]);
+        for iCell = 1:length(validCell)
+            
+            idCurCell = validCell(iCell);
+            lw = 2;
+            if idCurCell == curCells_id(iSetCell)
+                lw = 4;
+            end
+            
+            figure(figMap_RS_DFL);
+            plot(sp(1), infoCells(curCells_session(iSetCell)).cellCenter(idCurCell,2)+shifts(curCells_session(iSetCell),1), ...
+                infoCells(curCells_session(iSetCell)).cellCenter(idCurCell,1)++shifts(curCells_session(iSetCell),2), 'o',...
+                'MarkerSize', 10, 'LineWidth', lw, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', cMap_bwr(matColorIndex(idCurCell), :));
+            hold(sp(1), 'on');
+        end
+        [d1, d2] = size(infoCells(1).imgFOV);
+        axis equal
+        set(sp(1), 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20]);
+        title(sp(1), sprintf('Resting State corr: %s session%d Cell%d', nameSubj, curCells_session(iSetCell), curCells_id(iSetCell)))
+                
+        
+        % Movie-driven correlation
+        curMatR_DFL = resultsCorr_DFL(curCells_session(iSetCell)).matR(:,curCells_id(iSetCell));
+        matColorIndex_DFL = max(min(fix(((curMatR_DFL - cmin)./(cmax-cmin)*256)+1), 256), 1); % saturating it to cmax and cmin
+        for iCell = 1:length(validCell)
+            
+            idCurCell = validCell(iCell);
+            lw = 2;
+            if idCurCell == curCells_id(iSetCell)
+                lw = 4;
+            end
+            
+            figure(figMap_RS_DFL);
+            plot(sp(2), infoCells(curCells_session(iSetCell)).cellCenter(idCurCell,2)+shifts(curCells_session(iSetCell),1), ...
+                infoCells(curCells_session(iSetCell)).cellCenter(idCurCell,1)++shifts(curCells_session(iSetCell),2), 'o',...
+                'MarkerSize', 10, 'LineWidth', lw, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', cMap_bwr(matColorIndex_DFL(idCurCell), :));
+            hold(sp(2), 'on');
+        end
+        [d1, d2] = size(infoCells(1).imgFOV);
+        axis equal
+        set(sp(2), 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20]);
+        title(sp(2), sprintf('Movie-driven corr: %s session%d Cell%d', nameSubj, curCells_session(iSetCell), curCells_id(iSetCell)))      
+    end
+    
+    input('')
+    
+    
+end
 
 
 %%
