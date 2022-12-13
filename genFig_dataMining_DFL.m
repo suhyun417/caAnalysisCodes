@@ -203,6 +203,162 @@ end
 axis on
 set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20])
 
+
+
+%% PCAs on 20-s blocks
+% block information
+paramCond.condName = {'Scene Motion', 'Human Faces', 'Monkey Bodies', 'Monkey Faces', 'Object Motion', 'Optic Flow'}';
+paramCond.condOrder = [1 2 6 3 5 4; 5 6 4 1 3 2]';
+[b, indCondReorder] = sort(paramCond.condOrder, 1);
+
+indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
+% indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
+% 
+for ii = 1:length(cellTS)
+    minsnrmovie1(ii, 1) = min(cellTS(ii).snr_movie1);
+end
+
+% indCellValid_snr = find(minsnrmovie1>0.1);   
+
+% indCellValid = intersect(indCellValid_trial, indCellValid_snr);
+
+clear matAvg*
+for iCell = 1:length(indCellValid)   
+    
+    matAvgTS1(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie1)'; % now it's scaled dF
+    matAvgTS2(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie2)'; %
+    
+    steAvgTS1(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie1)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie1, 1)-1))'; % now it's scaled dF
+    steAvgTS2(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie2)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie2, 1)-1))'; 
+
+end
+
+matAvgTS1_block = reshape(matAvgTS1(1:1200, :)', size(matAvgTS1, 2), 200, 6);
+matAvgTS2_block = reshape(matAvgTS2(1:1200, :)', size(matAvgTS2, 2), 200, 6);
+
+matAvgTS_block_reorder{1} = matAvgTS1_block(:,:,indCondReorder(:,1));
+matAvgTS_block_reorder{2} = matAvgTS2_block(:,:,indCondReorder(:,2));
+% matAvgTS2_block_reorder = matAvgTS2_block(:,:,indCondReorder(:,2));
+
+figure
+for iR = 1:6
+subplot(2, 6, iR);
+imagesc(zscore(matAvgTS2_block(:,:,iR)')')
+end
+for iR = 1:6
+subplot(2,6,iR+6);
+imagesc(zscore(matAvgTS_block_reorder{2}(:,:,iR)')')
+end
+
+for iMovie = 1:2
+    for iB = 1:6
+        
+        [coeff, score, latent, tsquared, explained] = pca(zscore(matAvgTS_block_reorder{iMovie}(:,:,iB)')'); %pca(zscore(matAvgTS1)');
+        [sortedScore, indCell] = sort(score(:,1:10), 'descend');
+        
+        %     explained(1:10)
+        
+%             figure;
+%             set(gcf, 'Color', 'w', 'Position', [700 700 885 415])
+%             subplot(1,3,1);
+%             plot(coeff(:,1:3))
+%             legend('PC1', 'PC2', 'PC3')
+%             set(gca, 'XTick', 0:100:200, 'XTickLabel', 0:10:20)
+%             xlabel('Time (s)')
+%             title(sprintf('%s', paramCond.condName{iB}))
+%             subplot(1,3,2)
+%             imagesc(zscore(matAvgTS_block_reorder{iMovie}(indCell(:,1),:,iB)')')
+%             colormap(hot)
+%             set(gca, 'XTick', 0:50:200, 'XTicklabel', 0:5:20)
+%             title('PC1 sorted')
+%             xlabel('Time (s)')
+%             ylabel('Cells (sorted)')
+%             subplot(1,3,3)
+%             imagesc(zscore(matAvgTS_block_reorder{iMovie}(indCell(:,2),:,iB)')')
+%             colormap(hot)
+%             set(gca, 'XTick', 0:50:200, 'XTicklabel', 0:5:20)
+%             title('PC2 sorted')
+%             xlabel('Time (s)')
+%             ylabel('Cells (sorted)')
+% 
+%             print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_DFLmovie%d_PCA_BlockID%d', nameSubj, FOV_ID, iMovie, iB)), '-depsc')
+        
+        resultsPCA(iB, iMovie).explained = explained;
+        resultsPCA(iB, iMovie).coeff = coeff(:, 1:10);
+        resultsPCA(iB, iMovie).score = score(:, 1:10);
+        resultsPCA(iB, iMovie).indCellSorted = indCell;
+        
+    end
+end
+
+%%%% next step is to draw FOV pc score
+for iB = 1:size(resultsPCA, 1)
+    fig_fov = figure;
+    set(fig_fov, 'Color', 'w', 'Position', [1200 560 1060 390])
+    for iMovie = 1:2
+        iPC = 1;
+        curIndCell = resultsPCA(iB, iMovie).indCellSorted(:,iPC);
+        cMap_sort = jet(length(curIndCell)); %cool(length(curIndCell)); %jet(length(indCell)); %hsv(k);
+        setSortedIndCellValid = indCellValid(curIndCell);
+        
+        figure(fig_fov);
+        subplot(1,2,iMovie);
+        for iC = 1:length(setSortedIndCellValid)
+            
+            idCurCell = setSortedIndCellValid(iC);
+            plot(cellPix(idCurCell).centerCell(1,2)+shifts(cellPix(idCurCell).idAcrossSession(1,1),1), ...
+                cellPix(idCurCell).centerCell(1,1)+shifts(cellPix(idCurCell).idAcrossSession(1,1),2), 'o',...
+                'MarkerSize', 10, 'LineWidth', 2, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', cMap_sort(iC, :)); hold on;
+            
+            %         Coor = cellPix(indCellValid(iC)).contourCell{1};
+            %         plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iCell, :)); hold on;
+        end
+        [d1, d2] = size(infoCells(1).imgFOV);
+        set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20])
+        title(sprintf('%s: movie%d', paramCond.condName{iB}, iMovie))
+        
+    end
+end
+
+matColorIndex = max(min(fix(((curMatR - cmin)./(cmax-cmin)*256)+1), 256), 1); % saturating it to cmax and cmin
+
+
+    figMap_RS = figure;
+    set(figMap_RS, 'Color', 'w')
+for iCell = 1:length(validCell)
+    
+    idCurCell = validCell(iCell);
+    lw = 2;
+    if idCurCell == curCells_id(iSetCell)
+        lw = 4;
+    end
+    
+    figure(figMap_RS);
+    subplot(nRow, nCol, iSetCell);
+    plot(cellPix(idCurCell).centerCell(1,2)+shifts(curCells_session(iSetCell),1), ...
+                infoCells(curCells_session(iSetCell)).cellCenter(idCurCell,1)++shifts(curCells_session(iSetCell),2), 'o',...
+                'MarkerSize', 8, 'LineWidth', lw, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', cMap_bwr(matColorIndex(idCurCell), :));
+    hold on;
+end
+[d1 d2] = size(infoCells(1).imgFOV);
+axis equal
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20]);
+title(sprintf('Resting State corr: %s session%d Cell%d', nameSubj, curCells_session(iSetCell), curCells_id(iSetCell)))
+
+
+
+% for iS = 1:length(setDateSession)
+%     dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+%     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+%     load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
+%     
+% %     resultsDFL(iS).tS_session = tS_session;
+%     
+%     [matR, matP] = corr(tS_session(1).avgTS_C_raw_zscore, 'type', 'Spearman');
+%     resultsCorr_DFL(iS).matR = matR;
+% end
+
+
 %% spatial map
 tempA = cat(2, cellPix(indCellValid).repPix);
 tempA(~isnan(tempA)) = 1;

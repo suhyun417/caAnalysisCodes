@@ -86,7 +86,7 @@ for iSubj = 1:2 %2; %1;
         curCells_session = find(~isnan(cellIDAcrossDay(iCell, :)));
         curCells_id = cellIDAcrossDay(iCell, curCells_session);
         
-        tempMatTS1 = []; tempMatTS2 = []; nTrial1 = []; nTrial2 = []; stackCellPix = []; contourCell = {};
+        tempMatTS1 = []; tempMatTS2 = []; nTrial1 = []; nTrial2 = []; stackCellPix = []; contourCell = {}; centerCell = [];
         clear snr*
         for iSetCell = 1:length(curCells_id)
             
@@ -114,6 +114,7 @@ for iSubj = 1:2 %2; %1;
             curContour = infoCells(curCells_session(iSetCell)).coor_0p2{curCells_id(iSetCell)};...
                 curContour_shifted = curContour + [shifts(curCells_session(iSetCell), 2); shifts(curCells_session(iSetCell), 1)];
             contourCell = cat(1, contourCell, curContour_shifted);
+            centerCell = cat(1, centerCell, infoCells(curCells_session(iSetCell)).cellCenter(curCells_id(iSetCell),:));
             
         end
         
@@ -131,6 +132,7 @@ for iSubj = 1:2 %2; %1;
         cellPix(iCell).stackCellPix = stackCellPix;
         cellPix(iCell).repPix = stackCellPix(:,1);
         cellPix(iCell).contourCell = contourCell;
+        cellPix(iCell).centerCell = centerCell;
     end
     
     
