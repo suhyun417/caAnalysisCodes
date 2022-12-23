@@ -139,7 +139,7 @@ for iSubj = 1:2 %2; %1;
     %%
     if flagSaveFile
         fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-        save(fname_caTSFOV, 'cellTS', 'cellPix')
+        save(fname_caTSFOV, 'cellTS', 'cellPix', 'resultsDFL')
         fprintf(1, '\n Saving files for %s FOV %d\n', nameSubj, FOV_ID)
     end
     
