@@ -72,8 +72,8 @@ load(fname_shifts, 'shifts')
 fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
 load(fname_caTSFOV, 'cellTS', 'cellPix', 'resultsDFL')
 
-% fname_caTSFOV_RS = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_RSsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-% load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
+fname_caTSFOV_RS = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_RSsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
 
 %%
 indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
@@ -99,9 +99,178 @@ for iCell = 1:length(indCellValid)
 end
 
 
-%% compute residual & mean
+
+%% Drawboard for trial-to-trial correlation computation and gather the corr values
+% compute RS pairwise corr for all the sessions
+for iS = 1:length(setDateSession)
+    clear matR
+    [matR, matP] = corr(resultsRS(iS).C_raw', 'type', 'Spearman');
+    resultsCorr(iS).matR_RS = matR;
+    
+    dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
+    dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+    load(fullfile(dirProcdata_session, 'DFL_ts_tML'));
+
+    clear catMatR
+    for iTrial = 1:size(tS_session(1).matTS_C_raw_zscore, 3)
+        clear matR        
+        [matR] = corr(tS_session(1).matTS_C_raw_zscore(:,:,iTrial), 'type', 'Spearman');
+        
+        catMatR(:,:,iTrial) = matR;
+    end
+    resultsCorr(iS).matR_DFL{1} = catMatR;
+    resultsCorr(iS).matR_DFL_avg{1} = corr(tS_session(1).avgTS_C_raw_zscore, 'type', 'Spearman');
+    
+    clear catMatR
+    for iTrial = 1:size(tS_session(2).matTS_C_raw_zscore, 3)
+        clear matR        
+        [matR] = corr(tS_session(2).matTS_C_raw_zscore(:,:,iTrial), 'type', 'Spearman');
+        
+        catMatR(:,:,iTrial) = matR;
+    end
+    resultsCorr(iS).matR_DFL{2} = catMatR;
+    resultsCorr(iS).matR_DFL_avg{2} = corr(tS_session(2).avgTS_C_raw_zscore, 'type', 'Spearman');
+
+end
+
+% For all the longitudinally tracted cells
+indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
+cellIDAcrossDay_validCell = cat(2, cellIDAcrossDay(indCellValid, :), indCellValid);
+
+setPair = nchoosek(1:length(indCellValid), 2);
+% later I can reorganize this into matrix using the below line
+% ind = sub2ind([length(indCellValid) length(indCellValid)], setPair(:,1), setPair(:, 2));
+registeredCellPairCorr = struct([]);
+
+for iPair = 1:length(setPair)
+    
+    idPair = setPair(iPair,:);
+    
+    setSession = find(sum(~isnan(cellIDAcrossDay_validCell(setPair(iPair,:), 1:end-1)))==2);
+    
+       
+    corrRS = []; corrDFL_1 = []; corrDFL_2 = []; corrDFL_1_avgSes = []; corrDFL_2_avgSes = [];
+    for iSes = 1:length(setSession) %size(cellIDAcrossDay_validCell, 2)-1
+%         if sum(isnan(cellIDAcrossDay_validCell(setPair(iPair,:), iSes))) > 0
+%             continue;
+%         end
+        idSes = setSession(iSes);
+
+        indCell_curPair = cellIDAcrossDay_validCell(setPair(iPair,:), idSes);
+        
+        corrRS(iSes,:) = [idSes resultsCorr(idSes).matR_RS(indCell_curPair(1), indCell_curPair(2))];
+        corrDFL_1 = cat(1, corrDFL_1, cat(2, repmat(idSes, size(resultsCorr(idSes).matR_DFL{1}, 3), 1), ...
+            squeeze(resultsCorr(idSes).matR_DFL{1}(indCell_curPair(1), indCell_curPair(2), :))));
+        corrDFL_2 = cat(1, corrDFL_2, cat(2, repmat(idSes, size(resultsCorr(idSes).matR_DFL{2}, 3), 1), ...
+            squeeze(resultsCorr(idSes).matR_DFL{2}(indCell_curPair(1), indCell_curPair(2), :))));
+        corrDFL_1_avgSes(iSes,:) = [idSes resultsCorr(idSes).matR_DFL_avg{1}(indCell_curPair(1), indCell_curPair(2))];
+        corrDFL_2_avgSes(iSes,:) = [idSes resultsCorr(idSes).matR_DFL_avg{2}(indCell_curPair(1), indCell_curPair(2))];
+    end
+    
+    registeredCellPairCorr(iPair).idPair = idPair;
+    registeredCellPairCorr(iPair).setSession = setSession;
+    registeredCellPairCorr(iPair).corrRS = corrRS;
+%     registeredCellPairCorr(iPair).corrRS_mean = mean(corrRS(:,2));
+    registeredCellPairCorr(iPair).corrDFL_1 = corrDFL_1;
+    registeredCellPairCorr(iPair).corrDFL_2 = corrDFL_2;
+    registeredCellPairCorr(iPair).corrDFL_1_avgSes = corrDFL_1_avgSes;
+    registeredCellPairCorr(iPair).corrDFL_2_avgSes = corrDFL_2_avgSes;
+end
+        
+for iPair = 1:length(registeredCellPairCorr)
+    
+    if isempty(registeredCellPairCorr(iPair).setSession)
+        setCorrMean(iPair, 1:5) = NaN;
+        continue;
+    end
+    
+    setCorrMean(iPair, 1) = mean(registeredCellPairCorr(iPair).corrRS(:,2));
+    setCorrMean(iPair, 2) = mean(registeredCellPairCorr(iPair).corrDFL_1(:,2));
+    setCorrMean(iPair, 3) = mean(registeredCellPairCorr(iPair).corrDFL_2(:,2));
+    setCorrMean(iPair, 4) = mean(registeredCellPairCorr(iPair).corrDFL_1_avgSes(:,2));
+    setCorrMean(iPair, 5) = mean(registeredCellPairCorr(iPair).corrDFL_2_avgSes(:,2));
+end
+        
+
+ind = sub2ind([length(indCellValid) length(indCellValid)], setPair(:,1), setPair(:, 2));
+matCorrMov1 = NaN(length(indCellValid));
+matCorrMov1(ind) = setCorrMean(:,2);
+matCorrRS = NaN(length(indCellValid));
+matCorrRS(ind) = setCorrMean(:,1);
 
 
+%% Residuals
+% idea: for each time point (e.g. 1s), gather the activity of cell 1 and
+% correlate them with cell 2, so pair-wise correlation for each time point
+% then see whether there are some correlation change across time
+sizeBin = 10;
+
+iCell = 1;
+tMat = cellTS(indCellValid(iCell)).matTS_movie1(:, 1:1200)';
+
+iBinT = 1;
+(iBinT-1)*sizeBin+1:iBinT*sizeBin
+
+
+
+% compute residual & mean
+for iCell = 1:length(indCellValid)
+
+tMat = cellTS(indCellValid(iCell)).matTS_movie1;
+tMatNorm = zscore(cellTS(indCellValid(iCell)).matTS_movie1')';
+tMatNorm_mean = mean(tMatNorm);
+tMatNorm_res = tMatNorm - tMatNorm_mean;
+
+figure(100);clf;
+subplot(2,1,1)
+imagesc(tMatNorm)
+title(sprintf('Cell #%d, ID%d: before & after mean subtraction', iCell, indCellValid(iCell)))
+set(gca, 'XTickLabel', 20:20:120)
+subplot(2,1,2)
+imagesc(tMatNorm_res)
+set(gca, 'CLim', [0 10])
+set(gca, 'XTickLabel', 20:20:120)
+
+figure(200);clf;
+subplot(2,1,1)
+plot(tMatNorm(1:5, :)')
+hold on;
+plot(tMatNorm_mean, 'k-', 'LineWidth', 2)
+axis tight
+title(sprintf('Cell #%d, ID%d: before & after mean subtraction (first 5 trials)', iCell, indCellValid(iCell)))
+set(gca, 'XTickLabel', 20:20:120)
+subplot(2,1,2)
+plot(tMatNorm_res(1:5, :)')
+axis tight
+set(gca, 'XTickLabel', 20:20:120)
+
+input('')
+end
+
+
+    
+%     iC = setPair(iPair, 1);
+%     jC = setPair(iPair, 2);
+    
+  
+
+iCell = 1; % size(cellIDAcrossDay_validCell, 1)
+setSession = find(~isnan(cellIDAcrossDay_validCell(iCell, 1:size(cellIDAcrossDay_validCell, 2)-1)));
+iSession = 1;
+idSession = setSession(iSession);
+
+% indices of valid members of cells from this session
+indCellSession = cellIDAcrossDay_validCell(~isnan(cellIDAcrossDay_validCell(:, idSession)), idSession);
+
+
+% pairwise correlation during movie
+
+%     resultsCorr_DFL(iS).matR = matR;
+
+
+
+
+% end
 
 
 %% PCA part - now separated and saved into "analCa_DFL_PCA.m"
