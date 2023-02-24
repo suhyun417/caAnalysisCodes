@@ -180,7 +180,7 @@ end
 for iPair = 1:length(registeredCellPairCorr)
     
     if isempty(registeredCellPairCorr(iPair).setSession)
-        setCorrMean(iPair, 1:5) = NaN;
+        setCorrMean(iPair, 1:5) = 0; %NaN;
         continue;
     end
     
@@ -193,24 +193,103 @@ end
         
 
 ind = sub2ind([length(indCellValid) length(indCellValid)], setPair(:,1), setPair(:, 2));
-matCorrMov1 = NaN(length(indCellValid));
-matCorrMov1(ind) = setCorrMean(:,2);
 matCorrRS = NaN(length(indCellValid));
 matCorrRS(ind) = setCorrMean(:,1);
+matCorrMov1 = NaN(length(indCellValid));
+matCorrMov1(ind) = setCorrMean(:,2);
+matCorrMov2 = NaN(length(indCellValid));
+matCorrMov2(ind) = setCorrMean(:,3);
 
+tempSubset = 1:109;
+figure;
+set(gcf, 'Color', 'w')
+sp(1) = subplot(1,3,1);
+imagesc(matCorrMov1(tempSubset, tempSubset))
+title('mov 1')
+sp(2) = subplot(1,3,2);
+imagesc(matCorrMov2(tempSubset, tempSubset))
+title('mov 2')
+sp(3) = subplot(1,3,3);
+imagesc(matCorrRS(tempSubset, tempSubset))
+title('RS')
+set(sp, 'CLim', [-1 1].*0.6)
+colormap('jet')
 
 %% Residuals
-% idea: for each time point (e.g. 1s), gather the activity of cell 1 and
-% correlate them with cell 2, so pair-wise correlation for each time point
+% for each time bin (e.g. 1s), gather the avg activity of cell 1 and
+% correlate them with cell 2, so pair-wise correlation for each time bin
 % then see whether there are some correlation change across time
-sizeBin = 10;
 
-iCell = 1;
+% For all the longitudinally tracted cells
+indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
+cellIDAcrossDay_validCell = cat(2, cellIDAcrossDay(indCellValid, :), indCellValid);
+
+setPair = nchoosek(1:length(indCellValid), 2);
+
+sizeBin_msec = 1000; %10;
+sizeBin = sizeBin_msec./100; %100ms sampling (10hz imaging)
+
+for iPair = 1:length(setPair)
+    
+    idPair = setPair(iPair,:); % this is an index of "cells more than 8 trials" (i.e. 1 - 157 for tabla, 1-7 for max)
+    idPair_cellTS = cellIDAcrossDay_validCell(idPair, end); % this is the index of "cellTS" (i.e. all the cells longitudinally registered)
+    
+    setSession = find(sum(~isnan(cellIDAcrossDay_validCell(idPair, 1:end-1)))==2);
+    
+    % cell 1 of this pair
+    cellTS(idPair_cellTS(1)).idAcrossSession
+    cellTS(idPair_cellTS(1)).nTrial1_set
+    
+    temp = cat(1, 1, cellTS(idPair_cellTS(1)).nTrial1_set(1:end-1)+1);
+    setTrial1 = cat(2, temp, cellTS(idPair_cellTS(1)).nTrial1_set);
+    
+    locSes = ismember(cellTS(idPair_cellTS(1)).idAcrossSession(:,1), setSession);
+    
+    % cell 2 of this pair
+    
+    
+%     for iSes = 1:length(setSession) %
+%         idSes = setSession(iSes);
+%         
+%         
+        
+
+    
+    iCell = 1;
 tMat = cellTS(indCellValid(iCell)).matTS_movie1(:, 1:1200)';
 
 iBinT = 1;
 (iBinT-1)*sizeBin+1:iBinT*sizeBin
+    
+    
+       
+    corrRS = []; corrDFL_1 = []; corrDFL_2 = []; corrDFL_1_avgSes = []; corrDFL_2_avgSes = [];
+    for iSes = 1:length(setSession) %size(cellIDAcrossDay_validCell, 2)-1
+%         if sum(isnan(cellIDAcrossDay_validCell(setPair(iPair,:), iSes))) > 0
+%             continue;
+%         end
+        idSes = setSession(iSes);
 
+        indCell_curPair = cellIDAcrossDay_validCell(setPair(iPair,:), idSes);
+        
+        corrRS(iSes,:) = [idSes resultsCorr(idSes).matR_RS(indCell_curPair(1), indCell_curPair(2))];
+        corrDFL_1 = cat(1, corrDFL_1, cat(2, repmat(idSes, size(resultsCorr(idSes).matR_DFL{1}, 3), 1), ...
+            squeeze(resultsCorr(idSes).matR_DFL{1}(indCell_curPair(1), indCell_curPair(2), :))));
+        corrDFL_2 = cat(1, corrDFL_2, cat(2, repmat(idSes, size(resultsCorr(idSes).matR_DFL{2}, 3), 1), ...
+            squeeze(resultsCorr(idSes).matR_DFL{2}(indCell_curPair(1), indCell_curPair(2), :))));
+        corrDFL_1_avgSes(iSes,:) = [idSes resultsCorr(idSes).matR_DFL_avg{1}(indCell_curPair(1), indCell_curPair(2))];
+        corrDFL_2_avgSes(iSes,:) = [idSes resultsCorr(idSes).matR_DFL_avg{2}(indCell_curPair(1), indCell_curPair(2))];
+    end
+    
+    registeredCellPairCorr(iPair).idPair = idPair;
+    registeredCellPairCorr(iPair).setSession = setSession;
+    registeredCellPairCorr(iPair).corrRS = corrRS;
+%     registeredCellPairCorr(iPair).corrRS_mean = mean(corrRS(:,2));
+    registeredCellPairCorr(iPair).corrDFL_1 = corrDFL_1;
+    registeredCellPairCorr(iPair).corrDFL_2 = corrDFL_2;
+    registeredCellPairCorr(iPair).corrDFL_1_avgSes = corrDFL_1_avgSes;
+    registeredCellPairCorr(iPair).corrDFL_2_avgSes = corrDFL_2_avgSes;
+end
 
 
 % compute residual & mean

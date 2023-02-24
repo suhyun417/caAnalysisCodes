@@ -4,18 +4,56 @@ clear all;
 
 ss = pwd;
 if ~isempty(strfind(ss, 'Volume')) % if it's local
-    dirProjects = '/Volumes/PROJECTS/parksh';
-    dirProcdata = '/Volumes/PROCDATA/parksh';
-    dirRawdata = '/Volumes/rawdata/parksh';
+    dirProjects = '/Volumes/NIFVAULT/projects/parksh';
+    dirProcdata = '/Volumes/NIFVAULT/procdata/parksh';
+    dirRawdata = '/Volumes/NIFVAULT/rawdata/parksh';
 else % on virtual machine
-    dirProjects = '/projects/parksh';
-    dirProcdata = '/procdata/parksh';
-    dirRawdata = '/rawdata/parksh';
+    dirProjects = '/nifvault/projects/parksh';
+    dirProcdata = '/nifvault/procdata/parksh';
+    dirRawdata = '/nifvault/rawdata/parksh';
 end
 
+%% Session info & optional parameters
+setSubj = {'Tabla', 1; 'Max', 3};
 
-nameSubj = 'Tabla';
-dateSession = '20191125'; % '20191113';
+iSubj = 2; %1; %2; %1;
+
+nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
+[infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
+
+[c, ia, indRun] = unique(infoSession.(1), 'sorted');
+setDateSession = c(2:end); % 1st one is always empty
+nSession = length(setDateSession);
+
+%%
+% cells pooled across days
+fname_stack = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellAcrossDay.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID)); 
+load(fname_stack, 'cellIDAcrossDay'); %, 'stackCellCenter')
+
+% cell quality info 
+fname_cellQC = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_cellQC.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID)); 
+load(fname_cellQC, 'infoCells')
+
+% translational shift across days
+fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_shifts.mat',...
+    nameSubj, FOV_ID, nameSubj, FOV_ID));  
+load(fname_shifts, 'shifts')
+
+% aligned cells TS and spatial info
+fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+load(fname_caTSFOV, 'cellTS', 'cellPix')
+
+%%
+% nameSubj = 'Tabla';
+% dateSession = '20191125'; % '20191113';
+
+cMap_line = cool(length(setDateSession));
+% fig_contours = figure;
+for iSession = 1:length(setDateSession) %;
+dateSession = setDateSession{iSession};
 
 dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
 dirPreproc = fullfile(dirProcdata_session, '_preproc');
@@ -23,7 +61,7 @@ dirPreproc = fullfile(dirProcdata_session, '_preproc');
 dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
 
 % load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', nameSubj, dateSession))
-load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
+load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
 
 %% Read source data
 addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
@@ -33,14 +71,297 @@ d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
 load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
 
 % get the contours and image field of view
-neuron_b = neuron.batches{1}.neuron;
-thr = 0.3; % the lower the smaller (more centralized) the contour
-Coor = neuron_b.get_contours(thr);
-imgFOV = neuron_b.Cn.*neuron_b.PNR;
-
+% thr = 0.3; % the lower the smaller (more centralized) the contour
+% Coor = neuron.get_contours(thr);
+% imgFOV = neuron.Cn.*neuron.PNR;
+% 
 % % draw all the contours
-% neuron_b.show_contours([], [], imgFOV, 'true');
+% neuron.show_contours([], [], imgFOV, 'true');
 
+% draw contours for each session
+figure;
+subplot('Position', [0 0 1 1]);
+imagesc(neuron.Cn.*neuron.PNR); colormap(gray);
+hold on;
+
+thr = 0.6; %0.2;
+cellColor = cMap_line(iSession, :); %'m'; %'c'; 
+widthContour = 1;
+[d1,d2] = size(neuron.Cn);
+indCellValid_session = cellIDAcrossDay(~isnan(cellIDAcrossDay(:,iSession)), iSession);
+
+CC = cell(length(indCellValid_session),1);
+CR = cell(length(indCellValid_session),2);
+% cmap_cell = cool(size(neuron.A, 2));
+for iCC = 1:length(indCellValid_session)
+    i = indCellValid_session(iCC); %sortedIndCell(iCC);
+    A_temp = full(reshape(neuron.A(:,i),d1,d2));
+    A_temp = medfilt2(A_temp,[3,3]);
+    A_temp = A_temp(:);
+    [temp,ind] = sort(A_temp(:).^2,'ascend');
+    temp =  cumsum(temp);
+    ff = find(temp > (1-thr)*temp(end),1,'first');
+    if ~isempty(ff)
+        CC{i} = contour(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor', cellColor, 'linewidth', widthContour);
+        fp = find(A_temp >= A_temp(ind(ff)));
+        [ii,jj] = ind2sub([d1,d2],fp);
+        CR{i,1} = [ii,jj]';
+        CR{i,2} = A_temp(fp)';
+    end
+    hold on;
+end
+axis off
+truesize;
+
+print(fullfile(dirFig, sprintf('%s_FOV%d_validCellContour_thr0p%d_session%d_cMapCool', ...
+    nameSubj, FOV_ID, thr*10, iSession)), '-depsc');
+
+end
+
+
+
+% %% Stacked cells across days: playing with examples
+% indCellValid = find(cat(1, cellTS.nTrial1_total)>8);
+% 
+% % tempATrial = cat(2, cellPix(indCellValid).repPix);
+% % tempATrial(~isnan(tempATrial)) = 10;
+% tempA = cat(2, cellPix.repPix);
+% tempA(~isnan(tempA)) = 1;
+% tempA(:, indCellValid) = tempA(:, indCellValid).*10;
+% 
+% imgCells = sum(tempA, 2, 'omitnan');
+% imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
+% 
+% figure;
+% set(gcf, 'Color', 'w')
+% imagesc(imgCells_2d)
+% colormap(turbo)
+% 
+% % A_temp = full(reshape(neuron.A(:,i),d1,d2));
+% 
+% figure;
+% set(gcf, 'Color', 'w')
+% cmap_cell = colormap(hsv(length(cellPix)));
+% for iCell = 1:length(cellPix)
+%     plot(cellPix(iCell).contourCell{1}(1,1:end), cellPix(iCell).contourCell{1}(2,1:end), ...
+%         'Color', cmap_cell(iCell, :), 'linewidth', 1); hold on;
+% %     text(cellPix(iCell).contourCell{1}(1,end), cellPix(iCell).contourCell{1}(2,end), num2str(iCell), ...
+% %         'color', 'k')
+% end
+% set(gca, 'YDir', 'reverse', 'XLim', [0-20 size(infoCells(1).imgFOV, 2)+20], 'YLim', [0-20 size(infoCells(1).imgFOV, 1)+20])
+
+
+%% Visualization of cell contours across days
+cellColor = cool(length(setDateSession));
+
+fig_acSession = figure;
+set(fig_acSession, 'Color', 'w')
+
+for iSession = 1:length(setDateSession)
+    % iSession = 1;
+    dateSession = setDateSession{iSession}; %'20191113'; %setDateSession{iSession};
+    
+    dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+    dirPreproc = fullfile(dirProcdata_session, '_preproc');
+    
+    
+    %%
+    addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
+    cnmfe_setup;
+    d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
+    
+    load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
+    
+    % validIndCell = [];
+    % validIndCell(:,1) = 1:length(neuron.ids);
+    % if strcmpi(nameSubj, 'max')
+    %     load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
+    %     validIndCell = indCell.validCell;
+    % end
+    
+    validIndCell = cellIDAcrossDay(~isnan(cellIDAcrossDay(:,iSession)), iSession);
+    
+    
+    % color cells to indicate sessions
+    thr = 0.3;
+    widthContour = 1; %1.5;
+    Coor = neuron.get_contours(thr);
+    infoCells(iSession).coor_0p3 = Coor;
+    
+    figure(fig_acSession);
+    subplot('Position', [0 0 1 1])
+    for i = 1:length(validIndCell) %size(Coor, 1)
+        %         cont = medfilt1(Coor{i}')';
+        cont = Coor{validIndCell(i)};
+        if size(cont,2) > 1 % "shifts" values are in the order of image matrix dimensions: first dimension is vertical ("y") and second dimension is horizontal ("x")
+            plot(cont(1,1:end)+shifts(iSession, 2), cont(2,1:end)+shifts(iSession, 1), 'Color', cellColor(iSession, :), 'linewidth', widthContour); hold on;
+        end
+    end
+end
+if iSubj == 1
+    set(gca, 'YDir', 'reverse', 'XLim', [0-20 size(infoCells(1).imgFOV, 2)+20], 'YLim', [0-20 size(infoCells(1).imgFOV, 1)+20])
+    axis equal
+    axis off
+    set(fig_acSession, 'Position', [1200 1140 size(infoCells(1).imgFOV,2)+40 size(infoCells(1).imgFOV,1)+40])
+    print(fig_acSession, fullfile(dirFig, sprintf('%s_FOV%d_validCellContour_thr0p%d_AcSession_cMapCool_padding40', ...
+    nameSubj, FOV_ID, thr*10)), '-depsc');
+elseif iSubj ==2
+    set(gca, 'YDir', 'reverse', 'XLim', [0 size(infoCells(1).imgFOV,2)], 'YLim', [0 size(infoCells(1).imgFOV,1)])
+    axis equal
+    axis off
+    set(fig_acSession, 'Position', [1200 1140 size(infoCells(1).imgFOV,2) size(infoCells(1).imgFOV,1)])
+    print(fig_acSession, fullfile(dirFig, sprintf('%s_FOV%d_validCellContour_thr0p%d_AcSession_cMapCool', ...
+    nameSubj, FOV_ID, thr*10)), '-depsc');
+end
+
+
+
+tempA = cat(2, cellPix.repPix);
+tempA(~isnan(tempA)) = 1;
+imgCells = sum(tempA, 2, 'omitnan');
+imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
+aa = cat(2, zeros(size(imgCells_2d,1), 20), imgCells_2d, zeros(size(imgCells_2d,1),20));
+aa = cat(1, zeros(20, size(infoCells(1).imgFOV,2)+40), aa, zeros(20, size(infoCells(1).imgFOV,2)+40));
+figure;
+subplot('Position', [0 0 1 1])
+imagesc(aa, [0 1]);
+colormap(gray)
+axis off
+set(gcf, 'Position', [1200 1140 size(infoCells(1).imgFOV,2)+40 size(infoCells(1).imgFOV,1)+40])
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_validCellContourf_AllCellsAcSession_gray_padding40', ...
+    nameSubj, FOV_ID)), '-depsc');
+
+tempA = cat(2, cellPix.repPix);
+tempA(~isnan(tempA)) = 1;
+imgCells = sum(tempA, 2, 'omitnan');
+imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
+figure;
+subplot('Position', [0 0 1 1])
+imagesc(imgCells_2d, [0 1]);
+colormap(gray)
+set(gcf, 'Position', [1200 1140 size(infoCells(1).imgFOV,2) size(infoCells(1).imgFOV,1)])
+axis off
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_validCellContourf_AllCellsAcSession_gray', ...
+    nameSubj, FOV_ID)), '-depsc');
+
+% for thr = [0.2:0.1:0.5]
+%     locbad=[]; nrows=[]; ncols=[];
+% Coor = neuron.get_contours(thr); 
+% [nrows, ncols] = cellfun(@size, Coor);
+% locbad = find(ncols<2); % the ones that get_contours couldn't get a reasonable localized contour at this threshold
+% length(locbad)
+% end
+
+figure;
+for iC = 1:length(locbad)    
+    i = locbad(iC);
+    A_temp = full(reshape(neuron.A(:,i),d1,d2));
+    A_temp = medfilt2(A_temp,[3,3]);
+    A_temp = A_temp(:);
+    [temp,ind] = sort(A_temp(:).^2,'ascend');
+    temp =  cumsum(temp);
+    ff = find(temp > (1-thr)*temp(end),1,'first');
+    if ~isempty(ff)
+        CC{i} = contour(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor', 'b'); hold on;
+    end
+    set(gca, 'YDir', 'reverse', 'XLim', [0 d2], 'YLim', [0 d1])
+    input('')
+end
+
+
+
+
+% Generate cell location map within FOV
+thr = 0.5; % the lower the smaller (more centralized) the contour
+cellColor = [1 1 1];
+widthContour = 1;
+[d1,d2] = size(neuron.Cn);
+
+figure;
+imagesc(zeros(d1, d2)); % background
+colormap(gray);
+caxis([0 0.1]);
+hold on;
+
+CC = cell(size(neuron.A, 2),1);
+CR = cell(size(neuron.A, 2),2);
+for i = 1:size(neuron.A ,2)
+    A_temp = full(reshape(neuron.A(:,i),d1,d2));
+    A_temp = medfilt2(A_temp,[3,3]);
+    A_temp = A_temp(:);
+    [temp,ind] = sort(A_temp(:).^2,'ascend');
+    temp =  cumsum(temp);
+    ff = find(temp > (1-thr)*temp(end),1,'first');
+    if ~isempty(ff)
+        CC{i} = contourf(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor',cellColor, 'linewidth', widthContour);
+        fp = find(A_temp >= A_temp(ind(ff)));
+        [ii,jj] = ind2sub([d1,d2],fp);
+        CR{i,1} = [ii,jj]';
+        CR{i,2} = A_temp(fp)';
+    end
+    hold on;
+end
+axis off
+title(sprintf('%s: %s', nameSubj, dateSession))
+% %save
+% print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
+
+% end
+%
+
+% thr = 0.3; % the lower the smaller (more centralized) the contour
+Coor = neuron.get_contours(thr);
+imgFOV = neuron.Cn.*neuron.PNR;
+
+
+figure;
+[center] = neuron.estCenter();
+imagesc(imgFOV); colormap(gray);
+hold on
+plot(center(:,2), center(:, 1), 'r.');
+text(center(:,2)+1, center(:,1), num2str([1:length(neuron.ids)]'), 'Color', 'w');
+
+
+% draw contours
+figure;
+subplot('Position', [0 0 1 1]);
+imagesc(neuron.Cn.*neuron.PNR); colormap(gray);
+hold on;
+
+thr = 0.6; %0.2;
+% cellColor = [1 1 1];
+linecolor = 'm'; %'c'; 
+widthContour = 1;
+[d1,d2] = size(neuron.Cn);
+indCellValid_session = cellIDAcrossDay(~isnan(cellIDAcrossDay(:,iSession)), iSession);
+
+CC = cell(length(indCellValid_session),1);
+CR = cell(length(indCellValid_session),2);
+% cmap_cell = cool(size(neuron.A, 2));
+for iCC = 1:length(indCellValid_session)
+    i = indCellValid_session(iCC); %sortedIndCell(iCC);
+    A_temp = full(reshape(neuron.A(:,i),d1,d2));
+    A_temp = medfilt2(A_temp,[3,3]);
+    A_temp = A_temp(:);
+    [temp,ind] = sort(A_temp(:).^2,'ascend');
+    temp =  cumsum(temp);
+    ff = find(temp > (1-thr)*temp(end),1,'first');
+    if ~isempty(ff)
+        CC{i} = contour(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor', linecolor, 'linewidth', widthContour);
+        fp = find(A_temp >= A_temp(ind(ff)));
+        [ii,jj] = ind2sub([d1,d2],fp);
+        CR{i,1} = [ii,jj]';
+        CR{i,2} = A_temp(fp)';
+    end
+    hold on;
+end
+axis off
+
+title(sprintf('%s: %s', nameSubj, dateSession))
+
+
+
+%% LN talk 2020 Feb
 %%
 condName_BPM = {'human face', 'marmoset face', 	'marmoset body', 'scene', 'non familiar object', 'hands and catcher',...
     'phase scrambled', 'space scrambled', 'grating', 'random dot motion'};

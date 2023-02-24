@@ -123,10 +123,12 @@ for iSubj = 1:2 %2; %1;
         cellTS(iCell).snr_movie1 = snr_movie1;
         cellTS(iCell).matTS_movie1 = tempMatTS1;
         cellTS(iCell).matTS_movie2 = tempMatTS2;
-        cellTS(iCell).nTrial1_set = nTrial1;
+        cellTS(iCell).nTrial1_set = nTrial1;        
         cellTS(iCell).nTrial1_total = nTrial1(end);
-        cellTS(iCell).nTrial2_set = nTrial2;
+        cellTS(iCell).setSession_trial_movie1 = nTrial1;
+        cellTS(iCell).nTrial2_set = nTrial2;        
         cellTS(iCell).nTrial2_total = nTrial2(end);
+        cellTS(iCell).setSession_trial_movie1 = nTrial2;
         
         cellPix(iCell).idAcrossSession = cat(2, curCells_session', curCells_id');
         cellPix(iCell).stackCellPix = stackCellPix;
