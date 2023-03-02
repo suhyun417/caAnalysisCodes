@@ -1,6 +1,6 @@
 % runSaveCaTS_acrossSessionFOV_BPMsorted.m
 %
-% 2022/11/1
+% 2023/02/24
 % save the BPM time series for the cells aligned across sessions for a given FOV
 
 
@@ -71,16 +71,34 @@ for iS = 1:length(setDateSession)
     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
     load(fullfile(dirProcdata_session, 'BPM_ts_tML'));
     
+    resultsBPM(iS).tS_session_stim = tS_session_stim;
+
+%     tS_session.tS_trial(iCell, iTrial)
 %     tS_sesion_stim(iCell, iStim) %% cells x 25 conditions
-    %%%%%%%%%% bis hier %%%%%%%%%%%%%%5
-    
-    
-%     resultsDFL(iS).tS_session = tS_session;
 end
 
-% %%
+% resultsBPM(1).tS_session_stim(1,1)
+% idStim: 11
+% indTrial: [11×1 double]
+% indTrial_org: [11×2 double]
+% matTS: [46×11 double]
+% matTS_norm: [46×11 double]
+% matAmp: [11×11 double]
+% matAmp_norm: [11×11 double]
+% matAvgAmp: [11×1 double]
+% matAvgAmp_norm: [11×1 double]
+% avgAmp: -0.0026
+% avgAmp_norm: -0.2002
+% matAmp_b: [10×11 double]
+% matAmp_b_norm: [10×11 double]
+% matAvgAmp_b: [11×1 double]
+% matAvgAmp_b_norm: [11×1 double]
+% avgAmp_b: -0.0864
+% avgAmp_b_norm: -0.3803
+
 % cellTS = struct([]);
 % cellPix = struct([]);
+% 
 % for iCell = 1:size(cellIDAcrossDay, 1)
 %     curCells_session = find(~isnan(cellIDAcrossDay(iCell, :)));
 %     curCells_id = cellIDAcrossDay(iCell, curCells_session);
