@@ -39,7 +39,7 @@ flagSaveFile = 0; %1;
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1; %2; %1;
+iSubj = 1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -64,6 +64,12 @@ load(fname_cellQC, 'infoCells')
 fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_shifts.mat',...
     nameSubj, FOV_ID, nameSubj, FOV_ID));  
 load(fname_shifts, 'shifts')
+
+% BPM data
+fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_BPMsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+save(fname_caTSFOV, 'cellTS')
+cellTS_BPM = cellTS;
+clear cellTS
 
 % DFL data to select the cells
 fname_caTSFOV_DFL = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
@@ -114,7 +120,7 @@ for iC = 1:length(indCellValid)
     cMap_s = turbo(length(curCells_id));
     figure(100);
     set(gcf, 'Position', [150 270 1450 1000]); clf;
-    for iStim = 1:size(resultsBPM(1).tS_session_stim, 2)
+    for iStim = 1:25 %size(resultsBPM(curCells_session(1)).tS_session_stim, 2)
         sp(iStim) = subplot(5,5,iStim);
         for iSetCell = 1:length(curCells_id)
             plot(resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS_norm, 'Color', cMap_s(iSetCell, :))
@@ -127,11 +133,12 @@ end
 
 % Check the cells across trials in one session: to check the amplitude &
 % timing issue from trial to trial
-iCell = 13;
+iCell = 28; %90; %13;
 curCells_session = find(~isnan(cellIDAcrossDay(iCell, :)));
 curCells_id = cellIDAcrossDay(iCell, curCells_session);
+cMap_s = turbo(length(curCells_id));
 
-iStim = 12; 
+iStim = 4; %3; %12; 
 figure;
 for iSetCell = 1:length(curCells_id)
     plot(resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS_norm, 'Color', cMap_s(iSetCell, :))
@@ -139,7 +146,7 @@ for iSetCell = 1:length(curCells_id)
     cla;
 end
 
-iSetCell = 3;
+iSetCell = 5; %2; %3;
 figure;
 for iC = 1:size(resultsBPM(curCells_session(iSetCell)).tS_session_stim,1) % all the cells from this session
     
@@ -158,24 +165,32 @@ end
 % load(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession)), ...
 %     'stimTiming_BPM', 'tS_session')
 %     indTrial_org = cat(2, tS_session(1).idRunTrial(:,1), cat(1, stimTiming_BPM.indValidTrial_orgBhv));
-tS_trial_session = tS_session(1).tS_trial;
+% tS_trial_session = tS_session(1).tS_trial;
 
 % let's look at a particular set of trials
 iCell = 13;
 curCells_session = find(~isnan(cellIDAcrossDay(iCell, :)));
 curCells_id = cellIDAcrossDay(iCell, curCells_session);
 
-iStim = 12; 
-iSession = 2;
+iStim = 4; %12; %1; %12; %22; %12; 
+iSession = 6; %10; %2; %4; %2; %3; %2;
 setRunTrial = resultsBPM(iSession).tS_session_stim(1,iStim).indTrial_org;
 
-iTrial = 4;
+for iTrial = 1:size(setRunTrial,1) %4;
 idRun = setRunTrial(iTrial,1);
 idTrial = setRunTrial(iTrial,2);
 
 % retrieve and quantify eye signal
-tempEye = resultsBPM(iSession).stimTiming_BPM(idRun).analog.eye(round(resultsBPM(iSession).stimTiming_BPM(idRun).t_org.stimOnset(idTrial)):round(resultsBPM(iSession).stimTiming_BPM(idRun).t_org.blankOnset_afterStim(idTrial)), :);
+tempEye = resultsBPM(iSession).stimTiming_BPM(idRun).analog.eye(round(resultsBPM(iSession).stimTiming_BPM(idRun).t_org.stimOnset(idTrial))-1000:...
+    round(resultsBPM(iSession).stimTiming_BPM(idRun).t_org.blankOnset_afterStim(idTrial))+3500, :);
 tempEye(tempEye<-5) = NaN;
+
+figure(4)
+plot(tempEye); hold on;
+line([1000 2000; 1000 2000], repmat(get(gca, 'YLim')', 1, 2), 'Color', 'k')
+title(sprintf('Trial #%d: Run %d Trial %d', iTrial, idRun, idTrial))
+input('')
+end
 
 for iTrial = 1:size(tS_trial_session, 2)
     

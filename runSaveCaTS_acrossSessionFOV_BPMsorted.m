@@ -34,12 +34,12 @@ addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 
 dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
-flagSaveFile = 0; %1;
+flagSaveFile = 1; %0; %1;
 
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1; %2; %1;
+iSubj = 2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -71,6 +71,7 @@ for iS = 1:length(setDateSession)
     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
     load(fullfile(dirProcdata_session, 'BPM_ts_tML'));
     
+%     resultsBPM(iS).tS_session = tS_session;
     resultsBPM(iS).tS_session_stim = tS_session_stim;
 
 %     tS_session.tS_trial(iCell, iTrial)
@@ -96,8 +97,67 @@ end
 % avgAmp_b: -0.0864
 % avgAmp_b_norm: -0.3803
 
-% cellTS = struct([]);
-% cellPix = struct([]);
+cellTS = struct([]);
+cellPix = struct([]);
+
+for iCell = 1:size(cellIDAcrossDay, 1)
+    curCells_session = find(~isnan(cellIDAcrossDay(iCell, :)));
+    curCells_id = cellIDAcrossDay(iCell, curCells_session);
+    
+    for iStim = 1:25 
+        tempMatTS = []; tempMatTS_norm = []; indTrial_org = {}; nTrial = [];
+        for iSetCell = 1:length(curCells_id)
+            
+            if iSubj == 2 && ismember(curCells_session(iSetCell), [1 2]) % first two sessions of Max's are not merged b/c of 500ms stim on time
+                continue;
+            end
+            
+            tempMatTS = cat(1, tempMatTS, resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS');
+            tempMatTS_norm = cat(1, tempMatTS_norm, resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS_norm');
+            
+            indTrial_org{iSetCell} = resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).indTrial_org;
+            nTrial(iSetCell, 1) = size(indTrial_org{iSetCell}, 1);
+        end
+        cellTS(iCell, iStim).CellIDAcrossSession = cat(2, curCells_session', curCells_id');
+        cellTS(iCell, iStim).indTrial_org = indTrial_org;
+        cellTS(iCell, iStim).idStim = resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).idStim;
+        cellTS(iCell, iStim).nTrial = nTrial;
+        cellTS(iCell, iStim).matTS = tempMatTS;
+        cellTS(iCell, iStim).matTS_norm = tempMatTS_norm;
+        cellTS(iCell, iStim).matTS_norm_avg = mean(tempMatTS_norm);
+        cellTS(iCell, iStim).matTS_norm_ste = std(tempMatTS_norm)./sqrt(size(tempMatTS_norm, 1)-1);
+        
+    end
+end
+
+%%
+if flagSaveFile
+    fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_BPMsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+    save(fname_caTSFOV, 'cellTS') %, 'cellPix')
+%     fprintf(1, '\n Saving files for %s FOV %d: in total %d/%d cells aligned \n', nameSubj, FOV_ID, countValidCell, length(flagDone))
+end
+
+% for iC = 1:length(indCellValid)
+%     iCell = indCellValid(iC);
+%     
+%     curCells_session = find(~isnan(cellIDAcrossDay(iCell, :)));
+%     curCells_id = cellIDAcrossDay(iCell, curCells_session);
+%     
+%     % quick and dirty check of cells across session to the same stimulus
+%     cMap_s = turbo(length(curCells_id));
+%     figure(100);
+%     set(gcf, 'Position', [150 270 1450 1000]); clf;
+%     for iStim = 1:25 %size(resultsBPM(curCells_session(1)).tS_session_stim, 2)
+%         sp(iStim) = subplot(5,5,iStim);
+%         for iSetCell = 1:length(curCells_id)
+%             plot(resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS_norm, 'Color', cMap_s(iSetCell, :))
+%             hold on
+%         end        
+%     end
+%     title(sp(1), sprintf('Cell ID:%d', iCell))
+%     input('')
+% end
+
 % 
 % for iCell = 1:size(cellIDAcrossDay, 1)
 %     curCells_session = find(~isnan(cellIDAcrossDay(iCell, :)));
@@ -134,9 +194,4 @@ end
 % end
 
 
-% %%
-% if flagSaveFile
-%     fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-%     save(fname_caTSFOV, 'cellTS', 'cellPix')
-%     fprintf(1, '\n Saving files for %s FOV %d: in total %d/%d cells aligned \n', nameSubj, FOV_ID, countValidCell, length(flagDone))
-% end
+
