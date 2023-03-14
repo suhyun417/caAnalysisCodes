@@ -108,19 +108,27 @@ for iCell = 1:size(cellIDAcrossDay, 1)
         tempMatTS = []; tempMatTS_norm = []; indTrial_org = {}; nTrial = [];
         for iSetCell = 1:length(curCells_id)
             
+            if iSubj == 1 && ismember(curCells_session(iSetCell), [11 12]) % last two sessions of Tabla's are not merged b/c of stimulus set
+                continue;
+            end
+            
             if iSubj == 2 && ismember(curCells_session(iSetCell), [1 2]) % first two sessions of Max's are not merged b/c of 500ms stim on time
                 continue;
             end
+            
             
             tempMatTS = cat(1, tempMatTS, resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS');
             tempMatTS_norm = cat(1, tempMatTS_norm, resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS_norm');
             
             indTrial_org{iSetCell} = resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).indTrial_org;
             nTrial(iSetCell, 1) = size(indTrial_org{iSetCell}, 1);
+            
+            curIdStim = resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).idStim;
+            
         end
         cellTS(iCell, iStim).CellIDAcrossSession = cat(2, curCells_session', curCells_id');
         cellTS(iCell, iStim).indTrial_org = indTrial_org;
-        cellTS(iCell, iStim).idStim = resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).idStim;
+        cellTS(iCell, iStim).idStim = curIdStim; %resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).idStim;
         cellTS(iCell, iStim).nTrial = nTrial;
         cellTS(iCell, iStim).matTS = tempMatTS;
         cellTS(iCell, iStim).matTS_norm = tempMatTS_norm;

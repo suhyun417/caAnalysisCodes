@@ -17,7 +17,7 @@ else % on virtual machine
     dirRawdata = '/rawdata/parksh';
 end
 
-flagSave = 1; % 1 if you want to save sorted time series into a .mat file
+flagSave = 0; %1; % 1 if you want to save sorted time series into a .mat file
 flagPlot = 0; % 1 if you want draw response selectivity plot for each cell. "genFig_stimSortedTS_BPM.m" does the same plotting
 flagSavePPTX = 0; % 1 if you want to save all the figures to a powerpoint file
 
