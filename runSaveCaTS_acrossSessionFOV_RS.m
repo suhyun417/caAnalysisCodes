@@ -37,7 +37,7 @@ addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 
 dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
-flagSaveFile = 1; %0; %1;
+flagSaveFile = 0; %1; %0; %1;
 
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};

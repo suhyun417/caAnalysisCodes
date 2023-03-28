@@ -69,18 +69,25 @@ fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/
 load(fname_shifts, 'shifts')
 
 % aligned cells TS and spatial info
-fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-load(fname_caTSFOV, 'cellTS', 'cellPix', 'resultsDFL')
+fname_caTSFOV_DFL = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+load(fname_caTSFOV_DFL, 'cellTS', 'cellPix')
+cellTS_DFL = cellTS;
+clear cellTS
+
+fname_caTSFOV_BPM = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_BPMsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+load(fname_caTSFOV_BPM, 'cellTS')
+cellTS_BPM = cellTS;
+clear cellTS
 
 fname_caTSFOV_RS = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_RSsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
 load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
 
 %%
-indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
+indCellValid = find(cat(1, cellTS_DFL.nTrial1_total)>8); % 
 % indCellValid_trial = find(cat(1, cellTS.nTrial1_total)>8); % cells that have more than 8 trials for movie 1
 % 
-for ii = 1:length(cellTS)
-    minsnrmovie1(ii, 1) = min(cellTS(ii).snr_movie1);
+for ii = 1:length(cellTS_DFL)
+    minsnrmovie1(ii, 1) = min(cellTS_DFL(ii).snr_movie1);
 end
 
 % indCellValid_snr = find(minsnrmovie1>0.1);   
@@ -90,18 +97,27 @@ end
 clear matAvg*
 for iCell = 1:length(indCellValid)   
     
-    matAvgTS1(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie1)'; % now it's scaled dF
-    matAvgTS2(:, iCell) = mean(cellTS(indCellValid(iCell)).matTS_movie2)'; %
+    matAvgTS1(:, iCell) = mean(cellTS_DFL(indCellValid(iCell)).matTS_movie1)'; % now it's scaled dF
+    matAvgTS2(:, iCell) = mean(cellTS_DFL(indCellValid(iCell)).matTS_movie2)'; %
     
-    steAvgTS1(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie1)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie1, 1)-1))'; % now it's scaled dF
-    steAvgTS2(:, iCell) = std((cellTS(indCellValid(iCell)).matTS_movie2)./sqrt(size(cellTS(indCellValid(iCell)).matTS_movie2, 1)-1))'; 
+    steAvgTS1(:, iCell) = std((cellTS_DFL(indCellValid(iCell)).matTS_movie1)./sqrt(size(cellTS_DFL(indCellValid(iCell)).matTS_movie1, 1)-1))'; % now it's scaled dF
+    steAvgTS2(:, iCell) = std((cellTS_DFL(indCellValid(iCell)).matTS_movie2)./sqrt(size(cellTS_DFL(indCellValid(iCell)).matTS_movie2, 1)-1))'; 
 
+end
+
+%% DFL averaged signal corr
+tsDFL_avg = struct([]);
+for iCell = 1:length(cellTS_DFL)
+    tsDFL_avg(iCell).avgTS1 = mean(zscore(cellTS_DFL(iCell).matTS_movie1, 0, 2))'; %
+    tsDFL_avg(iCell).avgTS2 = mean(zscore(cellTS_DFL(iCell).matTS_movie2, 0, 2))'; %
+    tsDFL_avg(iCell).steTS1 = std((cellTS_DFL(iCell).matTS_movie1)./sqrt(size(cellTS_DFL(iCell).matTS_movie1, 1)-1))'; 
+    tsDFL_avg(iCell).steTS2 = std((cellTS_DFL(iCell).matTS_movie2)./sqrt(size(cellTS_DFL(iCell).matTS_movie2, 1)-1))'; 
 end
 
 
 
 %% Drawboard for trial-to-trial correlation computation and gather the corr values
-% compute RS pairwise corr for all the sessions
+% compute RS and DFL pairwise corr (noise+signal corr) for all the sessions
 for iS = 1:length(setDateSession)
     clear matR
     [matR, matP] = corr(resultsRS(iS).C_raw', 'type', 'Spearman');
@@ -134,7 +150,7 @@ for iS = 1:length(setDateSession)
 end
 
 % For all the longitudinally tracted cells
-indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
+indCellValid = find(cat(1, cellTS_DFL.nTrial1_total)>8); % 
 cellIDAcrossDay_validCell = cat(2, cellIDAcrossDay(indCellValid, :), indCellValid);
 
 setPair = nchoosek(1:length(indCellValid), 2);
@@ -175,6 +191,13 @@ for iPair = 1:length(setPair)
     registeredCellPairCorr(iPair).corrDFL_2 = corrDFL_2;
     registeredCellPairCorr(iPair).corrDFL_1_avgSes = corrDFL_1_avgSes;
     registeredCellPairCorr(iPair).corrDFL_2_avgSes = corrDFL_2_avgSes;
+    
+    %% movie signal correlation using averaged time series
+    R1 = corr(tsDFL_avg(indCellValid(idPair(1))).avgTS1, tsDFL_avg(indCellValid(idPair(2))).avgTS1, 'type', 'Spearman');
+    registeredCellPairCorr(iPair).corrDFL_1_signal = R1;
+    R2 = corr(tsDFL_avg(indCellValid(idPair(1))).avgTS2, tsDFL_avg(indCellValid(idPair(2))).avgTS2, 'type', 'Spearman');
+    registeredCellPairCorr(iPair).corrDFL_2_signal = R2;
+    
 end
         
 for iPair = 1:length(registeredCellPairCorr)
@@ -189,6 +212,9 @@ for iPair = 1:length(registeredCellPairCorr)
     setCorrMean(iPair, 3) = mean(registeredCellPairCorr(iPair).corrDFL_2(:,2));
     setCorrMean(iPair, 4) = mean(registeredCellPairCorr(iPair).corrDFL_1_avgSes(:,2));
     setCorrMean(iPair, 5) = mean(registeredCellPairCorr(iPair).corrDFL_2_avgSes(:,2));
+    setCorrMean(iPair, 6) = mean(registeredCellPairCorr(iPair).corrDFL_1_signal);
+    setCorrMean(iPair, 7) = mean(registeredCellPairCorr(iPair).corrDFL_2_signal);
+    
 end
         
 
@@ -199,6 +225,10 @@ matCorrMov1 = NaN(length(indCellValid));
 matCorrMov1(ind) = setCorrMean(:,2);
 matCorrMov2 = NaN(length(indCellValid));
 matCorrMov2(ind) = setCorrMean(:,3);
+matCorrMov1_signal = NaN(length(indCellValid));
+matCorrMov1_signal(ind) = setCorrMean(:,6);
+matCorrMov2_signal = NaN(length(indCellValid));
+matCorrMov2_signal(ind) = setCorrMean(:,7);
 
 tempSubset = 1:109;
 figure;
@@ -207,13 +237,50 @@ sp(1) = subplot(1,3,1);
 imagesc(matCorrMov1(tempSubset, tempSubset))
 title('mov 1')
 sp(2) = subplot(1,3,2);
-imagesc(matCorrMov2(tempSubset, tempSubset))
-title('mov 2')
+imagesc(matCorrMov1_signal(tempSubset, tempSubset))
+title('mov 1:signal')
 sp(3) = subplot(1,3,3);
 imagesc(matCorrRS(tempSubset, tempSubset))
 title('RS')
 set(sp, 'CLim', [-1 1].*0.6)
 colormap('jet')
+
+
+%%
+[matR_sort, sortedRow] = sort(setCorrMean, 'descend'); % 1st column: RS, 2nd column: DFL1
+% setBothHigh = intersect(sortedRow(1:100,1), sortedRow(1:100,2));
+% setPair(setBothHigh(1:20),:)
+
+% top 20 pairs of highest postivie movie 1 correlation
+setMV = indCellValid(setPair(sortedRow(1:20,6),:));
+fig_MVcorrpairs = figure;
+set(fig_MVcorrpairs, 'Color', 'w', 'Position', [150 150 570 413])
+dim_fov = size(infoCells(1).imgFOV);
+for iP = 1:length(setMV)
+    
+    curP = setMV(iP,:);
+    curP_centercoords = cat(1, cellPix(curP(1)).centerCell(1,:), cellPix(curP(2)).centerCell(1,:)); % in image coords (row, column)
+        
+    figure(fig_MVcorrpairs);
+    hold on;
+    plot(curP_centercoords(1,2), curP_centercoords(1,1), 'b.', 'MarkerSize', 10); hold on;  
+    text(curP_centercoords(1,2)+1, curP_centercoords(1,1), num2str(curP(1)));  
+    plot(curP_centercoords(2,2), curP_centercoords(2,1), 'b.', 'MarkerSize', 10); hold on;
+    text(curP_centercoords(2,2)+1, curP_centercoords(2,1), num2str(curP(2)));
+    line(curP_centercoords(:,2), curP_centercoords(:,1), 'Color', 'b');
+    set(gca, 'YDir', 'reverse', 'XLim', [0-10 dim_fov(2)+10], 'YLim', [0-10 dim_fov(1)+10], 'TickDir', 'out');
+end
+title(sprintf('%s: top 20 pairs with highest positive correlation during movie 1', nameSubj))
+
+
+figure
+subplot(3,1,1)
+imagesc(zscore(cellTS_DFL(193).matTS_movie1')')
+subplot(3,1,2)
+imagesc(zscore(cellTS_DFL(124).matTS_movie1')')
+subplot(3,1,3)
+imagesc(zscore(cellTS_DFL(63).matTS_movie1')')
+
 
 %% Residuals
 % for each time bin (e.g. 1s), gather the avg activity of cell 1 and
