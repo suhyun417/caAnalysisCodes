@@ -70,13 +70,19 @@ for iSubj = 1:2 %2; %1;
     load(fname_shifts, 'shifts')
     
     %%
+    resultsRS = struct([]);
     for iS = 1:length(setDateSession)
         dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
         dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
         load(fullfile(dirProcdata_session, 'RS_ts.mat'));
         
-        resultsRS(iS).C_raw = cat(2, tSeries_RS.C_raw);
-        resultsRS(iS).C = cat(2, tSeries_RS.C);
+        catCRaw = []; catC = [];
+        for iRun = 1:length(tSeries_RS)
+            catCRaw = cat(2, catCRaw, tSeries_RS(iRun).C_raw(:, 1:1200));
+            catC = cat(2, catC, tSeries_RS(iRun).C(:, 1:1200));
+        end
+        resultsRS(iS).C_raw = catCRaw; %cat(2, tSeries_RS.C_raw);
+        resultsRS(iS).C = catC; %cat(2, tSeries_RS.C);       
         
 %         tSeries_RS(iRun).idNeuron = neuron.ids;
 %         tSeries_RS(iRun).C_raw = neuron.C_raw(:, count+1:count+nFrame);  %

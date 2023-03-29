@@ -70,6 +70,7 @@ for iSubj = 1:2 %2; %1;
     load(fname_shifts, 'shifts')
     
     %%
+    resultsDFL = struct([]);
     for iS = 1:length(setDateSession)
         dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
         dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);

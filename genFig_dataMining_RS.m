@@ -348,7 +348,6 @@ indCellValid = find(cat(1, cellTS_DFL.nTrial1_total)>8); %
 % end
 
 
-%%
 %% Drawboard for trial-to-trial correlation computation and gather the corr values
 % compute RS and DFL pairwise corr for all the sessions
 for iS = 1:length(setDateSession)
@@ -464,6 +463,11 @@ title('RS')
 set(sp, 'CLim', [-1 1].*0.6)
 colormap('jet')
 
+flagSave = 0;
+if flagSave
+    fname_corr = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_corr_trialbased.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+    save(fname_corr, 'resultsCorr', 'registeredCellPairCorr', 'setCorrMean')
+end
 
 %%
 [matR_sort, sortedRow] = sort(setCorrMean, 'descend'); % 1st column: RS, 2nd column: DFL1

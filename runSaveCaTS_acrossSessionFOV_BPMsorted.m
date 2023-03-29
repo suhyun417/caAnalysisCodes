@@ -66,6 +66,7 @@ fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/
 load(fname_shifts, 'shifts')
 
 %%
+resultsBPM = struct([]);
 for iS = 1:length(setDateSession)
     dateSession = setDateSession{iS}; %'20191113'; % '20191125'; %'20191113'; %'20191125';
     dirProcdata_session = fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
