@@ -41,7 +41,7 @@ dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 2; %1; %2; %1;
+iSubj = 1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -179,8 +179,8 @@ for iPair = 1:length(setPair)
             squeeze(resultsCorr(idSes).matR_DFL{1}(indCell_curPair(1), indCell_curPair(2), :))));
         corrDFL_2 = cat(1, corrDFL_2, cat(2, repmat(idSes, size(resultsCorr(idSes).matR_DFL{2}, 3), 1), ...
             squeeze(resultsCorr(idSes).matR_DFL{2}(indCell_curPair(1), indCell_curPair(2), :))));
-        corrDFL_1_avgSes(iSes,:) = [idSes resultsCorr(idSes).matR_DFL_avg{1}(indCell_curPair(1), indCell_curPair(2))];
-        corrDFL_2_avgSes(iSes,:) = [idSes resultsCorr(idSes).matR_DFL_avg{2}(indCell_curPair(1), indCell_curPair(2))];
+%         corrDFL_1_avgSes(iSes,:) = [idSes resultsCorr(idSes).matR_DFL_avg{1}(indCell_curPair(1), indCell_curPair(2))];
+%         corrDFL_2_avgSes(iSes,:) = [idSes resultsCorr(idSes).matR_DFL_avg{2}(indCell_curPair(1), indCell_curPair(2))];
     end
     
     registeredCellPairCorr(iPair).idPair = idPair;
@@ -189,8 +189,8 @@ for iPair = 1:length(setPair)
 %     registeredCellPairCorr(iPair).corrRS_mean = mean(corrRS(:,2));
     registeredCellPairCorr(iPair).corrDFL_1 = corrDFL_1;
     registeredCellPairCorr(iPair).corrDFL_2 = corrDFL_2;
-    registeredCellPairCorr(iPair).corrDFL_1_avgSes = corrDFL_1_avgSes;
-    registeredCellPairCorr(iPair).corrDFL_2_avgSes = corrDFL_2_avgSes;
+%     registeredCellPairCorr(iPair).corrDFL_1_avgSes = corrDFL_1_avgSes;
+%     registeredCellPairCorr(iPair).corrDFL_2_avgSes = corrDFL_2_avgSes;
     
     %% movie signal correlation using averaged time series
     R1 = corr(tsDFL_avg(indCellValid(idPair(1))).avgTS1, tsDFL_avg(indCellValid(idPair(2))).avgTS1, 'type', 'Spearman');
@@ -200,6 +200,7 @@ for iPair = 1:length(setPair)
     
 end
         
+clear setCorrMean
 for iPair = 1:length(registeredCellPairCorr)
     
     if isempty(registeredCellPairCorr(iPair).setSession)
@@ -210,10 +211,10 @@ for iPair = 1:length(registeredCellPairCorr)
     setCorrMean(iPair, 1) = mean(registeredCellPairCorr(iPair).corrRS(:,2));
     setCorrMean(iPair, 2) = mean(registeredCellPairCorr(iPair).corrDFL_1(:,2));
     setCorrMean(iPair, 3) = mean(registeredCellPairCorr(iPair).corrDFL_2(:,2));
-    setCorrMean(iPair, 4) = mean(registeredCellPairCorr(iPair).corrDFL_1_avgSes(:,2));
-    setCorrMean(iPair, 5) = mean(registeredCellPairCorr(iPair).corrDFL_2_avgSes(:,2));
-    setCorrMean(iPair, 6) = mean(registeredCellPairCorr(iPair).corrDFL_1_signal);
-    setCorrMean(iPair, 7) = mean(registeredCellPairCorr(iPair).corrDFL_2_signal);
+%     setCorrMean(iPair, 4) = mean(registeredCellPairCorr(iPair).corrDFL_1_avgSes(:,2));
+%     setCorrMean(iPair, 5) = mean(registeredCellPairCorr(iPair).corrDFL_2_avgSes(:,2));
+    setCorrMean(iPair, 4) = mean(registeredCellPairCorr(iPair).corrDFL_1_signal);
+    setCorrMean(iPair, 5) = mean(registeredCellPairCorr(iPair).corrDFL_2_signal);
     
 end
         
@@ -226,9 +227,9 @@ matCorrMov1(ind) = setCorrMean(:,2);
 matCorrMov2 = NaN(length(indCellValid));
 matCorrMov2(ind) = setCorrMean(:,3);
 matCorrMov1_signal = NaN(length(indCellValid));
-matCorrMov1_signal(ind) = setCorrMean(:,6);
+matCorrMov1_signal(ind) = setCorrMean(:,4);
 matCorrMov2_signal = NaN(length(indCellValid));
-matCorrMov2_signal(ind) = setCorrMean(:,7);
+matCorrMov2_signal(ind) = setCorrMean(:,5);
 
 tempSubset = 1:109;
 figure;
@@ -246,13 +247,14 @@ set(sp, 'CLim', [-1 1].*0.6)
 colormap('jet')
 
 
+
 %%
 [matR_sort, sortedRow] = sort(setCorrMean, 'descend'); % 1st column: RS, 2nd column: DFL1
 % setBothHigh = intersect(sortedRow(1:100,1), sortedRow(1:100,2));
 % setPair(setBothHigh(1:20),:)
 
 % top 20 pairs of highest postivie movie 1 correlation
-setMV = indCellValid(setPair(sortedRow(1:20,6),:));
+setMV = indCellValid(setPair(sortedRow(1:20,4),:));
 fig_MVcorrpairs = figure;
 set(fig_MVcorrpairs, 'Color', 'w', 'Position', [150 150 570 413])
 dim_fov = size(infoCells(1).imgFOV);
@@ -272,7 +274,49 @@ for iP = 1:length(setMV)
 end
 title(sprintf('%s: top 20 pairs with highest positive correlation during movie 1', nameSubj))
 
+%%
+figure;
+plot(setCorrMean(:,1), setCorrMean(:,4), 'k.')
+xlabel('pairwise correlation during resting')
+ylabel('pairwise correlation: movie-driven')
 
+figure;
+plot3(setCorrMean(:,1), setCorrMean(:,2), setCorrMean(:,4), 'bo');
+hold on;
+iTop = 50;
+plot3(setCorrMean(sortedRow(1:iTop, 4),1), setCorrMean(sortedRow(1:iTop, 4),2), setCorrMean(sortedRow(1:iTop, 4),4), 'ro')
+axis_lim = [-1 1].*0.8;
+set(gca, 'XLim', axis_lim, 'YLim', axis_lim, 'ZLim', axis_lim)
+grid on
+xlabel('RS')
+ylabel('movie-trial')
+zlabel('movie-driven')
+view([0 0])
+view([0 90])
+view([90 0])
+
+iTop = size(sortedRow,1); %50;
+cmap_sort = flipud(jet(iTop));
+
+figure;
+orderpair = sortedRow(:,2);
+scatter3(setCorrMean(orderpair,1), setCorrMean(orderpair,2), setCorrMean(orderpair,4), 12, cmap_sort, 'filled')
+% p = plot3(setCorrMean(:,1), setCorrMean(:,2), setCorrMean(:,4), 'ko');
+% hold on;
+% for iC = 1:iTop
+%     plot3(setCorrMean(sortedRow(iC, 4),1), setCorrMean(sortedRow(iC, 4),2), setCorrMean(sortedRow(iC, 4),4), 'o',...
+%         'MarkerFaceColor', cmap_sort(iC,:), 'MarkerEdgeColor', cmap_sort(iC,:)); hold on;
+% end
+axis_lim = [-1 1].*0.8;
+set(gca, 'XLim', axis_lim, 'YLim', axis_lim, 'ZLim', axis_lim)
+grid on
+xlabel('RS')
+ylabel('movie-trial')
+zlabel('movie-driven')
+view([0 0])
+
+
+%%
 figure
 subplot(3,1,1)
 imagesc(zscore(cellTS_DFL(193).matTS_movie1')')

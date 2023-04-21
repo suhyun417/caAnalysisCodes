@@ -79,7 +79,130 @@ cellTS_BPM = cellTS;
 clear cellTS
 
 fname_caTSFOV_RS = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_RSsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
+load(fname_caTSFOV_RS, 'cellTS_RS') %, 'resultsRS')
 
 %%
 indCellValid = find(cat(1, cellTS_DFL.nTrial1_total)>8); %
+
+%%
+% what do I want to do?
+% 1) load PCA results
+% 2) map the cells based on PC score
+
+%% Movie-based PCs
+load(fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/DFL_TS_PCA.mat'))
+
+iMovie = 1;
+score = resultsPCA_DFL(iSubj).resultsPCA_run(iMovie).score;
+
+iPC = 3;
+for iPC = 1:3
+% [sortedScore_abs, indCell_abs] = sort(abs(score(:,iPC)), 'descend');
+[sortedScore, indCell] = sort(score(:,iPC), 'descend');
+
+
+% indCell = indCell_abs;
+
+figure;
+% cMap_sort = jet(length(indCell)); %jet(length(indCell)); %hsv(k);
+cMap_sort = cool(length(indCell));
+
+imgFOV = infoCells(1).imgFOV;
+[d1, d2] = size(imgFOV);
+% imagesc(imgFOV); 
+% hold on;
+for iCell = 1:length(indCell)
+    iC = indCell(iCell);
+        Coor = cellPix(indCellValid(iC)).contourCell{1};
+        plot(Coor(1,:)+shifts(cellPix(indCellValid(iC)).idAcrossSession(1,1),1),...
+            Coor(2,:)+shifts(cellPix(indCellValid(iC)).idAcrossSession(1,1),2),...
+            '.', 'Color', cMap_sort(iCell, :)); hold on;
+end
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20])
+title(sprintf('Ranked based on PC%d', iPC))
+end
+
+
+%% resting state PCs
+load(fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/RS_TS_PCA.mat'), 'resultsPCA')
+
+iSession = 1;
+% for iSession = 1:12
+% score = resultsPCA(iSubj).resultsPCA_session(iSession).score;
+% 
+for iBlock = 1:5
+score = resultsPCA(iSubj).resultsPCA_2min(iSession, iBlock).score;
+
+iPC = 1;
+[sortedScore, indCell] = sort(score(:,iPC), 'descend');
+
+figure;
+% cMap_sort = jet(length(indCell)); %jet(length(indCell)); %hsv(k);
+cMap_sort = cool(length(indCell));
+
+imgFOV = infoCells(iSession).imgFOV;
+[d1, d2] = size(imgFOV);
+% imagesc(imgFOV); 
+% hold on;
+for iCell = 1:length(indCell)
+    iC = indCell(iCell);
+%     Coor = infoCells(iSession).coor_0p2{iC};
+%     plot(Coor(1,:)+shifts(iSession,1),...
+%         Coor(2,:)+shifts(iSession,2),...
+%         '.', 'Color', cMap_sort(iCell, :)); hold on;
+    plot(infoCells(iSession).cellCenter(iC, 2)+shifts(iSession, 1), ...
+        infoCells(iSession).cellCenter(iC, 1)+shifts(iSession, 2), ...
+        'o', 'MarkerSize', 8, ...
+        'MarkerFaceColor', cMap_sort(iCell, :), 'MarkerEdgeColor', 'none'); %cMap_sort(iCell, :));
+    hold on;
+end
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20])
+title(sprintf('RS Session %d: Ranked based on PC%d', iSession, iPC))
+
+% print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_RS_PC%d_score_session%02d', nameSubj, FOV_ID, iPC, iSession)), '-depsc')
+
+title(sprintf('RS Session %d, Block %d: Ranked based on PC%d', iSession, iBlock, iPC))
+% print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_RS_PC%d_score_session%02d_block%02d', nameSubj, FOV_ID, iPC, iSession, iBlock)), '-depsc')
+end
+
+%% BPM PCs
+clear matAvg*
+for iC = 1:length(indCellValid)
+    
+    clear resp* matTS_norm* tempCat
+    iCell = indCellValid(iC);
+    
+    tempCat = cat(1, cellTS_BPM(iCell,:).matTS_norm_avg);
+    matTS_norm_cat = reshape(tempCat', [46 5 5]);
+    matTS_norm_cat_avg = squeeze(mean(matTS_norm_cat, 2));
+    
+    resp_avg_img = mean(tempCat(:, 20:30), 2)';
+    resp_avg_cat = mean(matTS_norm_cat_avg(20:30, :));
+    
+
+    matAvg_img(iC, :) = resp_avg_img;
+    matAvg_cat(iC, :) = resp_avg_cat;
+end
+
+[coeff_img, score_img, latent_img, tsquared_img, explained_img] = pca(matAvg_img); 
+[sortedScore, indCellSorted_img] = sort(score_img(:,1), 'descend');
+
+[coeff_cat, score_cat, latent_cat, tsquared_cat, explained_cat] = pca(matAvg_cat); 
+[sortedScore, indCellSorted_cat] = sort(score_cat(:,1), 'descend');
+
+figure;
+% cMap_sort = jet(length(indCell)); %jet(length(indCell)); %hsv(k);
+cMap_sort = cool(length(indCellSorted_cat));
+
+imgFOV = infoCells(1).imgFOV;
+[d1, d2] = size(imgFOV);
+for iCell = 1:length(indCellSorted_cat)
+    iC = indCellSorted_cat(iCell);
+        Coor = cellPix(indCellValid(iC)).contourCell{1};
+        plot(Coor(1,:)+shifts(cellPix(indCellValid(iC)).idAcrossSession(1,1),1),...
+            Coor(2,:)+shifts(cellPix(indCellValid(iC)).idAcrossSession(1,1),2),...
+            '.', 'Color', cMap_sort(iCell, :)); hold on;
+end
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20])
+title(sprintf('Ranked based on PC%d of categorical responses', iPC))
+

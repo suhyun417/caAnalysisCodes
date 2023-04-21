@@ -496,6 +496,35 @@ for iP = 1:length(setRS)
 end
 title(sprintf('%s: top 20 pairs with highest positive correlation during resting', nameSubj))
 
+% only select the pairs defined across multiple sessions
+spair = sortedRow(1:20, 1);
+for iP = 1:size(spair,1)
+tRRS{iP} = registeredCellPairCorr(spair(iP)).corrRS;
+end
+[nrows, ncols] = cellfun(@size, tRRS);
+highRS_multi = indCellValid(setPair(spair(find(nrows>1)),:)); % 
+
+fig_RScorrpairs_multi = figure;
+set(fig_RScorrpairs_multi, 'Color', 'w', 'Position', [150 150 570 413])
+dim_fov = size(infoCells(1).imgFOV);
+for iP = 1:size(highRS_multi,1)
+    
+    curP = highRS_multi(iP,:);
+    curP_centercoords = cat(1, cellPix(curP(1)).centerCell(1,:), cellPix(curP(2)).centerCell(1,:)); % in image coords (row, column)
+        
+    figure(fig_RScorrpairs_multi);
+    hold on;
+    plot(curP_centercoords(1,2), curP_centercoords(1,1), 'm.', 'MarkerSize', 10); hold on;  
+    text(curP_centercoords(1,2)+1, curP_centercoords(1,1), num2str(curP(1)));  
+    plot(curP_centercoords(2,2), curP_centercoords(2,1), 'm.', 'MarkerSize', 10); hold on;
+    text(curP_centercoords(2,2)+1, curP_centercoords(2,1), num2str(curP(2)));
+    line(curP_centercoords(:,2), curP_centercoords(:,1), 'Color', 'm');
+    set(gca, 'YDir', 'reverse', 'XLim', [0-10 dim_fov(2)+10], 'YLim', [0-10 dim_fov(1)+10], 'TickDir', 'out');
+end
+title(sprintf('%s: pairs with highest positive correlation during resting across multiple sessions', nameSubj))
+
+
+
 % top 20 pairs of highest postivie movie 1 correlation
 setMV = indCellValid(setPair(sortedRow(1:20,2),:));
 fig_MVcorrpairs = figure;
