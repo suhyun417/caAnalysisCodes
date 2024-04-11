@@ -17,13 +17,13 @@ if flagBiowulf
 else
     ss = pwd;
     if ~isempty(strfind(ss, 'Volume')) % if it's local
-        dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
-        dirProcdata = '/Volumes/NIFVAULT/PROCDATA/parksh';
-        dirRawdata = '/Volumes/rawdata/parksh';
+        dirProjects = '/Volumes/VNDLab_Data/projects/parksh'; %'/Volumes/NIFVAULT/PROJECTS/parksh';
+        dirProcdata = '/Volumes/VNDLab_Data/procdata/parksh'; %'/Volumes/NIFVAULT/PROCDATA/parksh';
+        dirRawdata = '/Volumes/VNDLab_Data/rawdata/parksh'; %'/Volumes/rawdata/parksh';
     else % on virtual machine
-        dirProjects = '/nifvault/projects/parksh';
-        dirProcdata = '/nifvault/procdata/parksh';
-        dirRawdata = '/nifvault/rawdata/parksh';
+        dirProjects = '/VNDLab_Data/projects/parksh'; %'/nifvault/projects/parksh';
+        dirProcdata = '/VNDLab_Data/procdata/parksh'; %'/nifvault/procdata/parksh';
+        dirRawdata = '/VNDLab_Data/rawdata/parksh'; %'/nifvault/rawdata/parksh';
     end
 end
 
@@ -63,7 +63,7 @@ set(fig_movie, 'Color', 'w')
 tlen = 1200;
 plot(tSeries_DFL(1).C_raw(ind(1:10), 1:tlen)'+repmat([1:10].*5, tlen, 1), 'LineWidth', 2)
 set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'XTick', 0:200:tlen, 'XTickLabel', 0:20:tlen/10, 'LineWidth', 2)
-print(fig_movie, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_DFL1_DFLpnr10', dateSession)), '-depsc')
+% print(fig_movie, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_DFL1_DFLpnr10', dateSession)), '-depsc')
 
 
 load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
@@ -76,7 +76,7 @@ set(fig_BPM, 'Color', 'w')
 tlen = 1200;
 plot(tSeries_BPM(1).C_raw(ind(1:10), 21:20+tlen)'+repmat([1:10].*5, tlen, 1), 'LineWidth', 2)
 set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'XTick', 0:200:tlen, 'XTickLabel', 0:20:tlen/10, 'LineWidth', 2)
-print(fig_BPM, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_BPM1_DFLpnr10', dateSession)), '-depsc')
+% print(fig_BPM, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_BPM1_DFLpnr10', dateSession)), '-depsc')
 
 
 %% load saved files
@@ -103,7 +103,7 @@ fname_caTSFOV_RS = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging
 load(fname_caTSFOV_RS, 'cellTS_RS', 'resultsRS')
 
 % clustering results
-load('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/DFL_TS_clustering.mat', 'Clustering_all', 'paramClustering')
+load(fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/DFL_TS_clustering.mat'), 'Clustering_all', 'paramClustering')
 
 
 %%
@@ -157,7 +157,7 @@ set(gca, 'CLim', [0 0.5])
 truesize
 box off
 axis off
-print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellMap_allCells_truesize', nameSubj, FOV_ID)), '-depsc')
+% print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellMap_allCells_truesize', nameSubj, FOV_ID)), '-depsc')
 
 
 
@@ -182,7 +182,7 @@ imagesc(zscore(matAvgTS1(:, indCelldfl))')
 colormap(hot)
 set(gca, 'CLim', [-2 10])
 set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
-print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_matTS_neg1pos8'), '-r200', '-dtiff')
+% print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_matTS_neg1pos8'), '-r200', '-dtiff')
 
 figure;
 set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 200])
@@ -192,7 +192,7 @@ cMap_sort(2,:) = [206 182 49]./255;
 colororder(cMap_sort)
 axis tight
 set(gca, 'XTickLabel', 20:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
-print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_avgTS_zscore'), '-depsc')
+% print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_avgTS_zscore'), '-depsc')
 
 
 figure;

@@ -15,14 +15,15 @@ function [infoT, opts] = readInfoSession(nameSubj, FOV_ID)
 
 ss = pwd;
 if ~isempty(strfind(ss, 'Volume')) % if it's local
-    dirProjects = '/Volumes/NIFVAULT/projects/parksh';
-    dirProcdata = '/Volumes/NIFVAULT/procdata/parksh';
-    dirRawdata = '/Volumes/NIFVAULT/rawdata/parksh';
+    dirProjects = '/Volumes/VNDLab_Data/projects/parksh'; %'/Volumes/NIFVAULT/PROJECTS/parksh';
+    dirProcdata = '/Volumes/VNDLab_Data/procdata/parksh'; %'/Volumes/NIFVAULT/PROCDATA/parksh';
+    dirRawdata = '/Volumes/VNDLab_Data/rawdata/parksh'; %'/Volumes/rawdata/parksh';
 else % on virtual machine
-    dirProjects = '/nifvault/projects/parksh';
-    dirProcdata = '/nifvault/procdata/parksh';
-    dirRawdata = '/nifvault/rawdata/parksh';
+    dirProjects = '/VNDLab_Data/projects/parksh'; %'/nifvault/projects/parksh';
+    dirProcdata = '/VNDLab_Data/procdata/parksh'; %'/nifvault/procdata/parksh';
+    dirRawdata = '/VNDLab_Data/rawdata/parksh'; %'/nifvault/rawdata/parksh';
 end
+
 
 % get session info from spreadsheet
 fname_infoSession = fullfile(dirProjects, sprintf('0Marmoset/Ca/infoSession_%s_FOV%d.xlsx', nameSubj, FOV_ID));
