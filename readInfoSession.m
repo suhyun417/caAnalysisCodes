@@ -13,16 +13,21 @@ function [infoT, opts] = readInfoSession(nameSubj, FOV_ID)
 % 2021/12/13 SHP: modify to retrieve the FOV info from the input
 
 
-ss = pwd;
-if ~isempty(strfind(ss, 'Volume')) % if it's local
-    dirProjects = '/Volumes/VNDLab_Data/projects/parksh'; %'/Volumes/NIFVAULT/PROJECTS/parksh';
-    dirProcdata = '/Volumes/VNDLab_Data/procdata/parksh'; %'/Volumes/NIFVAULT/PROCDATA/parksh';
-    dirRawdata = '/Volumes/VNDLab_Data/rawdata/parksh'; %'/Volumes/rawdata/parksh';
-else % on virtual machine
-    dirProjects = '/VNDLab_Data/projects/parksh'; %'/nifvault/projects/parksh';
-    dirProcdata = '/VNDLab_Data/procdata/parksh'; %'/nifvault/procdata/parksh';
-    dirRawdata = '/VNDLab_Data/rawdata/parksh'; %'/nifvault/rawdata/parksh';
-end
+% ss = pwd;
+% if ~isempty(strfind(ss, 'Volume')) % if it's local
+%     dirProjects = '/Volumes/VNDLab_Data/projects/parksh'; %'/Volumes/NIFVAULT/PROJECTS/parksh';
+%     dirProcdata = '/Volumes/VNDLab_Data/procdata/parksh'; %'/Volumes/NIFVAULT/PROCDATA/parksh';
+%     dirRawdata = '/Volumes/VNDLab_Data/rawdata/parksh'; %'/Volumes/rawdata/parksh';
+% else % on virtual machine
+%     dirProjects = '/VNDLab_Data/projects/parksh'; %'/nifvault/projects/parksh';
+%     dirProcdata = '/VNDLab_Data/procdata/parksh'; %'/nifvault/procdata/parksh';
+%     dirRawdata = '/VNDLab_Data/rawdata/parksh'; %'/nifvault/rawdata/parksh';
+% end
+
+directory = setDir_shp;
+dirProjects = directory.dirProjects;
+dirProcdata = directory.dirProcdata;
+dirRawdata = directory.dirRawdata;
 
 
 % get session info from spreadsheet

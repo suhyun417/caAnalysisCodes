@@ -9,23 +9,29 @@
 clear all;
 
 %% settings
-flagBiowulf = 0; %1; %0;
+% flagBiowulf = 0; %1; %0;
+% 
+% if flagBiowulf
+%     directory.dataHome = '/data/parks20/procdata/NeuroMRI/';
+%     dirFig = '/data/parks20/analysis/_figs';
+% else
+%     ss = pwd;
+%     if ~isempty(strfind(ss, 'Volume')) % if it's local
+%         dirProjects = '/Volumes/VNDLab_Data/projects/parksh'; %'/Volumes/NIFVAULT/PROJECTS/parksh';
+%         dirProcdata = '/Volumes/VNDLab_Data/procdata/parksh'; %'/Volumes/NIFVAULT/PROCDATA/parksh';
+%         dirRawdata = '/Volumes/VNDLab_Data/rawdata/parksh'; %'/Volumes/rawdata/parksh';
+%     else % on virtual machine
+%         dirProjects = '/VNDLab_Data/projects/parksh'; %'/nifvault/projects/parksh';
+%         dirProcdata = '/VNDLab_Data/procdata/parksh'; %'/nifvault/procdata/parksh';
+%         dirRawdata = '/VNDLab_Data/rawdata/parksh'; %'/nifvault/rawdata/parksh';
+%     end
+% end
 
-if flagBiowulf
-    directory.dataHome = '/data/parks20/procdata/NeuroMRI/';
-    dirFig = '/data/parks20/analysis/_figs';
-else
-    ss = pwd;
-    if ~isempty(strfind(ss, 'Volume')) % if it's local
-        dirProjects = '/Volumes/VNDLab_Data/projects/parksh'; %'/Volumes/NIFVAULT/PROJECTS/parksh';
-        dirProcdata = '/Volumes/VNDLab_Data/procdata/parksh'; %'/Volumes/NIFVAULT/PROCDATA/parksh';
-        dirRawdata = '/Volumes/VNDLab_Data/rawdata/parksh'; %'/Volumes/rawdata/parksh';
-    else % on virtual machine
-        dirProjects = '/VNDLab_Data/projects/parksh'; %'/nifvault/projects/parksh';
-        dirProcdata = '/VNDLab_Data/procdata/parksh'; %'/nifvault/procdata/parksh';
-        dirRawdata = '/VNDLab_Data/rawdata/parksh'; %'/nifvault/rawdata/parksh';
-    end
-end
+directory = setDir_shp;
+
+dirProjects = directory.dirProjects;
+dirProcdata = directory.dirProcdata;
+dirRawdata = directory.dirRawdata;
 
 addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
 addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
