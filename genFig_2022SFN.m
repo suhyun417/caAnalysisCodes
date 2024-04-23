@@ -147,9 +147,9 @@ tempA = cat(2, cellPix(:).repPix);
 tempA(~isnan(tempA)) = 1;
 
 % selected cells
-% tempA = cat(2, cellPix(indCellValid).repPix);
-% tempA(~isnan(tempA)) = 1;
-% % tempA(:, indCellValid) = tempA(:, indCellValid).*10;
+tempA = cat(2, cellPix(indCellValid).repPix);
+tempA(~isnan(tempA)) = 1;
+% tempA(:, indCellValid) = tempA(:, indCellValid).*10;
 
 imgCells = sum(tempA, 2, 'omitnan');
 imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
