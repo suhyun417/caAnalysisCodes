@@ -146,10 +146,10 @@ end
 tempA = cat(2, cellPix(:).repPix);
 tempA(~isnan(tempA)) = 1;
 
-% selected cells
-tempA = cat(2, cellPix(indCellValid).repPix);
-tempA(~isnan(tempA)) = 1;
-% tempA(:, indCellValid) = tempA(:, indCellValid).*10;
+% % selected cells
+% tempA = cat(2, cellPix(indCellValid).repPix);
+% tempA(~isnan(tempA)) = 1;
+% % tempA(:, indCellValid) = tempA(:, indCellValid).*10;
 
 imgCells = sum(tempA, 2, 'omitnan');
 imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
@@ -324,15 +324,15 @@ title(sprintf('%s: %s', nameSubj, dateSession))
 
 % end
 %
-Coor = neuron.get_contours(thr); 
-CC = Coor;
-for i = 1:size(Aor,2)
-    %         cont = medfilt1(Coor{i}')';
-    cont = Coor{i};
-    if size(cont,2) > 1
-        plot(cont(1,1:end),cont(2,1:end),'Color',cmap(i+size(Aor,2),:), 'linewidth', ln_wd); hold on;
-    end
-end
+% Coor = neuron.get_contours(thr); 
+% CC = Coor;
+% for i = 1:size(Aor,2)
+%     %         cont = medfilt1(Coor{i}')';
+%     cont = Coor{i};
+%     if size(cont,2) > 1
+%         plot(cont(1,1:end),cont(2,1:end),'Color',cmap(i+size(Aor,2),:), 'linewidth', ln_wd); hold on;
+%     end
+% end
 
 
 

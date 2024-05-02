@@ -12,8 +12,8 @@ function [directory] = setDir_shp()
         directory.dirProcdata = '/Volumes/VNDLab_Data/procdata/parksh'; %'/Volumes/NIFVAULT/PROCDATA/parksh';
         directory.dirRawdata = '/Volumes/VNDLab_Data/rawdata/parksh'; %'/Volumes/rawdata/parksh';
     else % on virtual machine
-        directory.dirProjects = '/VNDLab_Data/projects/parksh'; %'/nifvault/projects/parksh';
-        directory.dirProcdata = '/VNDLab_Data/procdata/parksh'; %'/nifvault/procdata/parksh';
-        directory.dirRawdata = '/VNDLab_Data/rawdata/parksh'; %'/nifvault/rawdata/parksh';
+        directory.dirProjects = '~/data/projects/parksh'; %'/nifvault/projects/parksh';
+        directory.dirProcdata = '~/data/procdata/parksh'; %'/nifvault/procdata/parksh';
+        directory.dirRawdata = '~/data/rawdata/parksh'; %'/nifvault/rawdata/parksh';
     end
 % end

@@ -16,6 +16,10 @@ dirProjects = directory.dirProjects;
 dirProcdata = directory.dirProcdata;
 dirRawdata = directory.dirRawdata;
 
+addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
+addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
+addpath(fullfile(dirProjects, '_toolbox/Fast_Tiff_Write/'));
+addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
@@ -64,8 +68,8 @@ dirPreproc = fullfile(dirProcdata_session, '_preproc');
 
 dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
 
-% load(sprintf('/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', nameSubj, dateSession))
-load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
+load(sprintf('%s/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', directory.dirProcdata, nameSubj, dateSession))
+% load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
 
 %% Read source data
 addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
