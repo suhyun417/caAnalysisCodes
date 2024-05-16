@@ -8,23 +8,30 @@ clear all;
 
 
 %% settings
-flagBiowulf = 0; %1; %0;
+% flagBiowulf = 0; %1; %0;
+% 
+% if flagBiowulf
+%     directory.dataHome = '/data/parks20/procdata/NeuroMRI/';
+%     dirFig = '/data/parks20/analysis/_figs';
+% else
+%     ss = pwd;
+%     if ~isempty(strfind(ss, 'Volume')) % if it's local
+%         dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
+%         dirProcdata = '/Volumes/NIFVAULT/PROCDATA/parksh';
+%         dirRawdata = '/Volumes/rawdata/parksh';
+%     else % on virtual machine
+%         dirProjects = '/nifvault/projects/parksh';
+%         dirProcdata = '/nifvault/procdata/parksh';
+%         dirRawdata = '/nifvault/rawdata/parksh';
+%     end
+% end
 
-if flagBiowulf
-    directory.dataHome = '/data/parks20/procdata/NeuroMRI/';
-    dirFig = '/data/parks20/analysis/_figs';
-else
-    ss = pwd;
-    if ~isempty(strfind(ss, 'Volume')) % if it's local
-        dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
-        dirProcdata = '/Volumes/NIFVAULT/PROCDATA/parksh';
-        dirRawdata = '/Volumes/rawdata/parksh';
-    else % on virtual machine
-        dirProjects = '/nifvault/projects/parksh';
-        dirProcdata = '/nifvault/procdata/parksh';
-        dirRawdata = '/nifvault/rawdata/parksh';
-    end
-end
+directory = setDir_shp;
+
+dirProjects = directory.dirProjects;
+dirProcdata = directory.dirProcdata;
+dirRawdata = directory.dirRawdata;
+dirFig = directory.dirFig;
 
 addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
 addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
@@ -32,7 +39,7 @@ addpath(fullfile(dirProjects, '_toolbox/Fast_Tiff_Write/'));
 addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 % gcp; % for parallel processingls
 
-dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
+% dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
 % flagSaveFile = 0; %1;
 

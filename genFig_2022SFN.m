@@ -32,6 +32,7 @@ directory = setDir_shp;
 dirProjects = directory.dirProjects;
 dirProcdata = directory.dirProcdata;
 dirRawdata = directory.dirRawdata;
+dirFig = directory.dirFig;
 
 addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
 addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
@@ -39,7 +40,7 @@ addpath(fullfile(dirProjects, '_toolbox/Fast_Tiff_Write/'));
 addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 % gcp; % for parallel processingls
 
-dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
+% dirFig = '~/data/projects/parksh/0Marmoset/Ca/_labNote/_figs/'; %fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};

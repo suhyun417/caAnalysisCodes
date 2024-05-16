@@ -15,6 +15,8 @@ directory = setDir_shp;
 dirProjects = directory.dirProjects;
 dirProcdata = directory.dirProcdata;
 dirRawdata = directory.dirRawdata;
+dirFig = directory.dirFig;
+
 
 addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
 addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
@@ -24,7 +26,7 @@ addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 2; %1; %2; %1;
+iSubj = 1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -66,7 +68,7 @@ dateSession = setDateSession{iSession};
 dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
 dirPreproc = fullfile(dirProcdata_session, '_preproc');
 
-dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
+% dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
 
 load(sprintf('%s/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', directory.dirProcdata, nameSubj, dateSession))
 % load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
@@ -87,10 +89,16 @@ load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
 % neuron.show_contours([], [], imgFOV, 'true');
 
 % draw contours for each session
+% figure;
+% subplot('Position', [0 0 1 1]);
+% imagesc(neuron.Cn.*neuron.PNR); colormap(gray);
+% hold on;
+
 figure;
 subplot('Position', [0 0 1 1]);
-imagesc(neuron.Cn.*neuron.PNR); colormap(gray);
-hold on;
+image(ones(size(neuron.Cn)).*255);
+colormap(gray);
+hold on
 
 thr = 0.6; %0.2;
 cellColor = cMap_line(iSession, :); %'m'; %'c'; 
@@ -122,6 +130,6 @@ axis off
 truesize;
 
 % print(fullfile(dirFig, sprintf('%s_FOV%d_validCellContour_thr0p%d_session%d_cMapCool', ...
-%     nameSubj, FOV_ID, thr*10, iSession)), '-depsc');
+%     nameSubj, FOV_ID, thr*10, iSession)), '-dpdf'); %'-depsc');
 
 end
