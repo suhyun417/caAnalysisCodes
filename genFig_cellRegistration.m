@@ -55,7 +55,7 @@ load(fname_shifts, 'shifts')
 %% Plot the histogram of cells detected across sessions with cumulative distribution
 flagCell = ~isnan(cellIDAcrossDay);
 
-figure
+figure;
 yyaxis left
 h = histogram(sum(flagCell, 2));
 yyaxis right
@@ -65,10 +65,34 @@ set(gca, 'TickDir', 'out')
 set(gca, 'XTick', 1:12)
 box off
 set(gcf, 'Color', 'w')
-set(gca, 'FontSize', 15)
 set(gcf, 'Position', [100 100 500 500])
 set(gca, 'FontSize', 15, 'LineWidth', 2)
-print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellRegistration_histogram', nameSubj, FOV_ID)), '-r300', '-depsc')
+% print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellRegistration_histogram', nameSubj, FOV_ID)), '-r300', '-depsc')
+
+
+%% Plot the cell registration results over days, not number of sessions
+setDateSession_datenum = datenum(setDateSession, 'yyyymmdd');
+nDaysBetweenSessions = diff(setDateSession_datenum);
+
+matDaysAcRegistration = [];
+nSessionRegistered = sum(flagCell, 2);
+for iCell = 1:length(nSessionRegistered)
+    if nSessionRegistered(iCell) > 1
+        locSession = find(flagCell(iCell, :)>0);
+        nDays = setDateSession_datenum(locSession(end)) - setDateSession_datenum(locSession(1));
+        matDaysAcRegistration(iCell,1) = nDays;
+    else
+        matDaysAcRegistration(iCell,1) = 0;
+    end
+end
+
+
+figure;
+set(gcf, 'Color', 'w', 'Position', [100 100 500 500])
+hh = histogram(matDaysAcRegistration(matDaysAcRegistration>0));
+set(gca, 'TickDir', 'out', 'Box', 'off')
+set(gca, 'FontSize', 15, 'LineWidth', 2)
+
 
 
 
