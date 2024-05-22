@@ -21,7 +21,7 @@ addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1; %1; %2; %1; %2; %1;
+iSubj = 2; %1; %1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -52,6 +52,23 @@ load(fname_shifts, 'shifts')
 % load(fname_caTSFOV, 'cellTS', 'cellPix')
 
 
+%% Plot the histogram of cells detected across sessions with cumulative distribution
+flagCell = ~isnan(cellIDAcrossDay);
+
+figure
+yyaxis left
+h = histogram(sum(flagCell, 2));
+yyaxis right
+plot(cumsum(h.Values), 'o-', 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'w')
+set(h, 'lineWidth', 2)
+set(gca, 'TickDir', 'out')
+set(gca, 'XTick', 1:12)
+box off
+set(gcf, 'Color', 'w')
+set(gca, 'FontSize', 15)
+set(gcf, 'Position', [100 100 500 500])
+set(gca, 'FontSize', 15, 'LineWidth', 2)
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellRegistration_histogram', nameSubj, FOV_ID)), '-r300', '-depsc')
 
 
 
