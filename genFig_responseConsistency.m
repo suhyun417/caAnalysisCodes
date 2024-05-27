@@ -55,8 +55,74 @@ fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s
 load(fname_caTSFOV, 'cellTS', 'cellPix')
 
 
+
+
 %%
-idCell = 34; %23;
+flagCell = ~isnan(cellIDAcrossDay);
+
+setDateSession_datenum = datenum(setDateSession, 'yyyymmdd');
+nDaysBetweenSessions = diff(setDateSession_datenum);
+
+matDaysAcRegistration = [];
+nSessionRegistered = sum(flagCell, 2);
+for iCell = 1:length(nSessionRegistered)
+    if nSessionRegistered(iCell) > 1
+        locSession = find(flagCell(iCell, :)>0);
+        nDays = setDateSession_datenum(locSession(end)) - setDateSession_datenum(locSession(1));
+        matDaysAcRegistration(iCell,1) = nDays;
+    else
+        matDaysAcRegistration(iCell,1) = 0;
+    end
+end
+
+
+%%
+locWeek = find(matDaysAcRegistration>=14);
+length(locWeek)
+
+% gather averaged TS of 1st session and last session that is at least 2
+% weeks apart
+matAvgTS_1 = []; matAvgTS_2 = []; tempInfoCell = [];
+for iCell = 1:length(locWeek)
+    idCell = locWeek(iCell);
+    locSession = find(flagCell(idCell, :)>0);
+    nDays = setDateSession_datenum(locSession(end)) - setDateSession_datenum(locSession(1));
+
+    setT = []; 
+    setT = cat(2, cat(1, 1, cellTS(idCell).nTrial1_set(1:end-1)+1), cellTS(idCell).nTrial1_set);
+
+    matAvgTS_1(:,iCell) = mean(cellTS(idCell).matTS_movie1(setT(1,1):setT(1,2),:),1)';
+    matAvgTS_2(:,iCell) = mean(cellTS(idCell).matTS_movie1(setT(end,1):setT(end,2),:),1)';
+    tempInfoCell(iCell, 1) = idCell;
+    tempInfoCell(iCell, 2) = nDays;
+
+end
+
+[matR] = corr(matAvgTS_1, matAvgTS_2, 'type', 'Spearman');
+setR = diag(matR);
+figure
+hR = histogram(setR);
+figure
+plot(tempInfoCell(:,2), setR, 'o')
+
+% quick test
+for iCell = 1:length(locWeek)
+    figure(3); cla;
+    plot(matAvgTS_1(:,iCell), 'ro-');
+    hold on
+    plot(matAvgTS_2(:,iCell), 'bo-');
+    input('')
+end
+
+
+%%
+figtemp = figure;
+set(gcf, 'color', 'w', 'Position', [401    35   378   862])
+
+tempSetC = find(matDaysAcRegistration>25);
+for iC = 1:length(tempSetC)
+
+idCell = tempSetC(iC); %34; %23;
 
 setT = []; avgT=[];
 setT = cat(2, cat(1, 1, cellTS(idCell).nTrial1_set(1:end-1)+1), cellTS(idCell).nTrial1_set);
@@ -68,8 +134,9 @@ end
 stringNameSession= cat(1, setDateSession{cellTS(idCell).idAcrossSession(:,1)}); % get date
 cMap = cool(length(setT));
 
-figtemp = figure;
-set(gcf, 'color', 'w', 'Position', [401    35   378   862])
+% figtemp = figure;
+% set(gcf, 'color', 'w', 'Position', [401    35   378   862])
+figure(figtemp); cla;
 for iSS = 1:length(setT)
 figure(figtemp);
 ydata = avgT(:,iSS)+50*(iSS-1);
@@ -81,8 +148,26 @@ axis tight
 set(gca, 'TickDir', 'out', 'box', 'off')
 set(gca, 'YTick', ytick, 'YTicklabel', stringNameSession)
 set(gca,'XTick', 200:200:1200, 'XTickLabel', 20:20:120)
+title(sprintf('%s: Cell ID %d', nameSubj, idCell))
 % print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_CellID%d_avgTS_eachSession',nameSubj, FOV_ID, idCell)), '-depsc')
 
+input('')
+end
+
+
+%% In case I need the histogram values
+% figure;
+% h = histogram(sum(flagCell, 2));
+% 
+% plot(cumsum(fliplr(h.Values)), 'o-')
+% hold on
+% text((1:length(h.Values))'-0.25, (cumsum(fliplr(h.Values))+10)', num2str(cumsum(fliplr(h.Values))'))
+% set(gca, 'XTick', 1:length(h.Values), 'XTickLabel', length(h.Values):-1:1)
+% xlabel('Number of detected sessions')
+% ylabel('Cumulative number of cells')
+% set(gca, 'TickDir', 'out', 'Box', 'off')
+% set(gca, 'FontSize', 15, 'LineWidth', 2)
+% % print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellRegistration_cumNumOverSessions', nameSubj, FOV_ID)), '-r300', '-depsc')
 
 
 
