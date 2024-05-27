@@ -4,6 +4,8 @@
 % Generate figure of example FOV and calcium traces 
 
 
+clear all;
+
 %% Directory settings
 directory = setDir_shp;
 dirProjects = directory.dirProjects;
@@ -46,12 +48,19 @@ fname_shifts = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/
     nameSubj, FOV_ID, nameSubj, FOV_ID));  
 load(fname_shifts, 'shifts')
 
-% aligned cells TS and spatial info
-fname_caTSFOV = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
-load(fname_caTSFOV, 'cellTS', 'cellPix')
+% % aligned cells TS and spatial info
+% fname_caTSFOV_DFL = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_DFLsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+% load(fname_caTSFOV_DFL, 'cellTS', 'cellPix')
+% cellTS_DFL = cellTS;
+% clear cellTS
+% 
+% fname_caTSFOV_BPM = fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_BPMsorted.mat', nameSubj, FOV_ID, nameSubj, FOV_ID));
+% load(fname_caTSFOV_BPM, 'cellTS')
+% cellTS_BPM = cellTS;
+% clear cellTS
 
-%% A. Example FOV and representative time series
-%%% FOV
+
+%% FOV
 iSession = 1; %:length(setDateSession) %;
 dateSession = setDateSession{iSession};
 
@@ -63,7 +72,7 @@ dirPreproc = fullfile(dirProcdata_session, '_preproc');
 load(sprintf('%s/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', directory.dirProcdata, nameSubj, dateSession))
 % load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
 
-%% Read source data
+% Read source data
 addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
 cnmfe_setup;
 d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
@@ -128,7 +137,7 @@ line([1 33], [265 265], 'Color', 'k', 'LineWidth', 5)
 %     nameSubj, FOV_ID, thr*10, iSession)), '-r0', '-depsc');
 
 
-%%% example time courses
+%% Example time courses
 dateSession = setDateSession{1};
 dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
 dirPreproc = fullfile(dirProcdata_session, '_preproc');
@@ -136,8 +145,8 @@ dirPreproc = fullfile(dirProcdata_session, '_preproc');
 load(fullfile(dirProcdata_session, 'DFL_ts.mat'))
 
 % select the cells
-pnrs = max(tSeries_DFL(1).C, [], 2)./std(tSeries_DFL(1).C_raw-tSeries_DFL(1).C, 0, 2); % peak amplitude divided by noise std
-[a, ind] = sort(pnrs, 'descend');
+pnrs_dfl = max(tSeries_DFL(1).C, [], 2)./std(tSeries_DFL(1).C_raw-tSeries_DFL(1).C, 0, 2); % peak amplitude divided by noise std
+[a, ind] = sort(pnrs_dfl, 'descend');
 % snrs = var(tSeries_DFL(1).C, 0, 2)./var(tSeries_DFL(1).C_raw-tSeries_DFL(1).C, 0, 2);
 % [a, ind] = sort(snrs, 'descend');
 
@@ -152,8 +161,8 @@ print(fig_movie, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_DFL1_DFLsnr5', dat
 
 load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
 
-% pnrs = max(tSeries_BPM(1).C, [], 2)./std(tSeries_BPM(1).C_raw-tSeries_BPM(1).C, 0, 2); % peak amplitude divided by noise std
-% [a, ind] = sort(pnrs, 'descend');
+pnrs_bpm = max(tSeries_BPM(1).C, [], 2)./std(tSeries_BPM(1).C_raw-tSeries_BPM(1).C, 0, 2); % peak amplitude divided by noise std
+[a, ind] = sort(pnrs_bpm, 'descend');
 % snrs = var(tSeries_BPM(1).C, 0, 2)./var(tSeries_BPM(1).C_raw-tSeries_BPM(1).C, 0, 2);
 % [a, ind] = sort(snrs, 'descend');
 
@@ -165,8 +174,35 @@ set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'XTick', 0:200:tlen, 'XT
 
 print(fig_BPM, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_BPM1_DFLsnr5', dateSession)), '-depsc')
 
+%% Example cell TS: select various examples depending on BPM>DFL, BPM<DFL, BPM=DFL 
+% DFL_ts.mat,BPM_ts.mat, RS_ts.mat: raw Ca TS (not-normalized, just cut for each run from concatenated source extraction)
+% BPM>DFL: Tabla session 1 cell 40, 9, 73, 82
+% BPM<DFL: Tabla session 1 cell 21, 4,  
+% BPM=DFL: Tabla session 1 cell 79, 35, 36, 23
+% select the cells 
 
-%%% Mark these example cells in the FOV
+% first check the PNRs consistency across runs
+load(fullfile(dirProcdata_session, 'DFL_ts_tML.mat'))
+pnrs_dfl_set = squeeze(max(tS_session(1).matTS_C)./std(tS_session(1).matTS_C_raw-tS_session(1).matTS_C));
+
+load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
+for iRun = 1:length(tSeries_BPM)
+pnrs_bpm_set(:,iRun) = max(tSeries_BPM(1).C, [], 2)./std(tSeries_BPM(1).C_raw-tSeries_BPM(1).C, 0, 2); % p
+end
+
+load(fullfile(dirProcdata_session, 'BPM_ts_tML.mat'), 'tS_run')
+
+
+
+
+figure
+aa = cat(1, tS_run(1).tS_trial(4,:).matTS);
+plot(aa)
+axis tight
+line(repmat(11:46:2208, 2, 1), repmat(get(gca, 'ylim')', 1, 48), 'Color', ones(1,3).*0.5)
+xlim([1 1200])
+
+%% Mark these example cells in the FOV
 figure;
 subplot('Position', [0 0 1 1]);
 image(ones(size(neuron.Cn)).*255);
