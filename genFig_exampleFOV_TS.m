@@ -177,13 +177,13 @@ print(fig_BPM, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_BPM1_DFLsnr5', dateS
 %% Example cell TS: select various examples depending on BPM>DFL, BPM<DFL, BPM=DFL 
 % DFL_ts.mat,BPM_ts.mat, RS_ts.mat: raw Ca TS (not-normalized, just cut for each run from concatenated source extraction)
 % BPM>DFL: Tabla session 1 cell 40, 9, 73, 82
-% BPM<DFL: Tabla session 1 cell 21, 4,  
-% BPM=DFL: Tabla session 1 cell 79, 35, 36, 23
+% BPM<DFL: Tabla session 1 cell 21, 4, 35, 41 
+% BPM=DFL: Tabla session 1 cell 79, 36, 23, 29
 % select the cells 
 
 % first check the PNRs consistency across runs
 load(fullfile(dirProcdata_session, 'DFL_ts_tML.mat'))
-pnrs_dfl_set = squeeze(max(tS_session(1).matTS_C)./std(tS_session(1).matTS_C_raw-tS_session(1).matTS_C));
+pnrs_dfl_set = squeeze(max(tS_session(1).matTS_C)./std(tS_session(1).matTS_C_raw-tS_session(1).matTS_C)); % for all the runs
 
 load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
 for iRun = 1:length(tSeries_BPM)
@@ -192,15 +192,53 @@ end
 
 load(fullfile(dirProcdata_session, 'BPM_ts_tML.mat'), 'tS_run')
 
+% set of the example cells 
+setCell = [40 9 73 82 21 4 35 41 79 36 23 29]; %[40 9 73 82 21 4 35 41 79 36 23 29];
+
+% prepare the cell traces
+matTS_BPM = [];
+for iCell = 1:length(setCell)
+    matTS_BPM(:, iCell) = cat(1, tS_run(1).tS_trial(setCell(iCell),:).matTS); % this is C_raw
+end
+
+iRun = 1; iMovie = 1;
+matTS_DFL = [];
+matTS_DFL = tS_session(iMovie).matTS_C_raw(:, setCell, iRun);
+
+load(fullfile(dirProcdata_session, 'RS_ts.mat'))
+matTS_RS = [];
+matTS_RS = tSeries_RS(1).C_raw(setCell, :)';
 
 
 
-figure
-aa = cat(1, tS_run(1).tS_trial(4,:).matTS);
-plot(aa)
+% plot BPM responses of a set of example cells with stim ON marks
+fig_BPM = figure;
+plot(matTS_BPM+repmat([1:length(setCell)].*3, size(matTS_BPM, 1), 1), 'LineWidth', 2)
 axis tight
 line(repmat(11:46:2208, 2, 1), repmat(get(gca, 'ylim')', 1, 48), 'Color', ones(1,3).*0.5)
 xlim([1 1200])
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w')
+set(fig_BPM, 'Color', 'w', 'Position', [385   185   500   940])
+
+
+% plot DFL responses of a set of example cells
+fig_DFL = figure;
+plot(matTS_DFL+repmat([1:length(setCell)].*3, size(matTS_DFL, 1), 1), 'LineWidth', 2)
+axis tight
+xlim([1 1200])
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w')
+set(fig_DFL, 'Color', 'w', 'Position', [100   100   500   940])
+
+
+% plot RS responses of a set of example cells
+fig_RS = figure;
+plot(matTS_RS+repmat([1:length(setCell)].*3, size(matTS_RS, 1), 1), 'LineWidth', 2)
+axis tight
+xlim([2100 2100+1199])
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w')
+set(fig_RS, 'Color', 'w', 'Position', [100   100   500   940])
+
+
 
 %% Mark these example cells in the FOV
 figure;
@@ -238,8 +276,8 @@ axis off
 truesize;
 
 hold on;
-cmap_cell = colororder; % cmap_cell = cool(size(neuron.A, 2));
-[a, setIDCell] = ismember(ind(1:5), indCellValid_session);
+cmap_cell = repmat(colororder, 2, 1); %colororder; % cmap_cell = cool(size(neuron.A, 2));
+[a, setIDCell] = ismember(setCell, indCellValid_session); %ismember(ind(1:5), indCellValid_session);
 
 for iCC = 1: length(setIDCell)
     i = setIDCell(iCC);
