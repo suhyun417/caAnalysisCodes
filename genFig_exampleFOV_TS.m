@@ -137,43 +137,6 @@ line([1 33], [265 265], 'Color', 'k', 'LineWidth', 5)
 %     nameSubj, FOV_ID, thr*10, iSession)), '-r0', '-depsc');
 
 
-%% Example time courses
-dateSession = setDateSession{1};
-dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-dirPreproc = fullfile(dirProcdata_session, '_preproc');
-
-load(fullfile(dirProcdata_session, 'DFL_ts.mat'))
-
-% select the cells
-pnrs_dfl = max(tSeries_DFL(1).C, [], 2)./std(tSeries_DFL(1).C_raw-tSeries_DFL(1).C, 0, 2); % peak amplitude divided by noise std
-[a, ind] = sort(pnrs_dfl, 'descend');
-% snrs = var(tSeries_DFL(1).C, 0, 2)./var(tSeries_DFL(1).C_raw-tSeries_DFL(1).C, 0, 2);
-% [a, ind] = sort(snrs, 'descend');
-
-fig_movie = figure;
-set(fig_movie, 'Color', 'w')
-tlen = 1200;
-plot(tSeries_DFL(1).C_raw(ind(1:5), 1:tlen)'+repmat([1:5].*5, tlen, 1), 'LineWidth', 2)
-set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'XTick', 0:200:tlen, 'XTickLabel', 0:20:tlen/10, 'LineWidth', 2)
-
-print(fig_movie, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_DFL1_DFLsnr5', dateSession)), '-depsc')
-
-
-load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
-
-pnrs_bpm = max(tSeries_BPM(1).C, [], 2)./std(tSeries_BPM(1).C_raw-tSeries_BPM(1).C, 0, 2); % peak amplitude divided by noise std
-[a, ind] = sort(pnrs_bpm, 'descend');
-% snrs = var(tSeries_BPM(1).C, 0, 2)./var(tSeries_BPM(1).C_raw-tSeries_BPM(1).C, 0, 2);
-% [a, ind] = sort(snrs, 'descend');
-
-fig_BPM = figure;
-set(fig_BPM, 'Color', 'w')
-tlen = 1200;
-plot(tSeries_BPM(1).C_raw(ind(1:5), 21:20+tlen)'+repmat([1:5].*5, tlen, 1), 'LineWidth', 2)
-set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'XTick', 0:200:tlen, 'XTickLabel', 0:20:tlen/10, 'LineWidth', 2)
-
-print(fig_BPM, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_BPM1_DFLsnr5', dateSession)), '-depsc')
-
 %% Example cell TS: select various examples depending on BPM>DFL, BPM<DFL, BPM=DFL 
 % DFL_ts.mat,BPM_ts.mat, RS_ts.mat: raw Ca TS (not-normalized, just cut for each run from concatenated source extraction)
 % BPM>DFL: Tabla session 1 cell 40, 9, 73, 82
@@ -298,12 +261,48 @@ for iCC = 1: length(setIDCell)
 end
 
 line([1 33], [265 265], 'Color', 'k', 'LineWidth', 5)
-print(fullfile(dirFig, sprintf('%s_FOV%d_validCellContour_thr0p%d_session%d_gray_scaleBar_exCells', ...
-    nameSubj, FOV_ID, thr*10, iSession)), '-r0', '-depsc');
+
+% print(fullfile(dirFig, sprintf('%s_FOV%d_validCellContour_thr0p%d_session%d_gray_scaleBar_exCells', ...
+%     nameSubj, FOV_ID, thr*10, iSession)), '-r0', '-depsc');
 
 
 
-
+%% Previous: Example time courses
+% dateSession = setDateSession{1};
+% dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+% dirPreproc = fullfile(dirProcdata_session, '_preproc');
+% 
+% load(fullfile(dirProcdata_session, 'DFL_ts.mat'))
+% 
+% % select the cells
+% pnrs_dfl = max(tSeries_DFL(1).C, [], 2)./std(tSeries_DFL(1).C_raw-tSeries_DFL(1).C, 0, 2); % peak amplitude divided by noise std
+% [a, ind] = sort(pnrs_dfl, 'descend');
+% % snrs = var(tSeries_DFL(1).C, 0, 2)./var(tSeries_DFL(1).C_raw-tSeries_DFL(1).C, 0, 2);
+% % [a, ind] = sort(snrs, 'descend');
+% 
+% fig_movie = figure;
+% set(fig_movie, 'Color', 'w')
+% tlen = 1200;
+% plot(tSeries_DFL(1).C_raw(ind(1:5), 1:tlen)'+repmat([1:5].*5, tlen, 1), 'LineWidth', 2)
+% set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'XTick', 0:200:tlen, 'XTickLabel', 0:20:tlen/10, 'LineWidth', 2)
+% 
+% print(fig_movie, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_DFL1_DFLsnr5', dateSession)), '-depsc')
+% 
+% 
+% load(fullfile(dirProcdata_session, 'BPM_ts.mat'))
+% 
+% pnrs_bpm = max(tSeries_BPM(1).C, [], 2)./std(tSeries_BPM(1).C_raw-tSeries_BPM(1).C, 0, 2); % peak amplitude divided by noise std
+% [a, ind] = sort(pnrs_bpm, 'descend');
+% % snrs = var(tSeries_BPM(1).C, 0, 2)./var(tSeries_BPM(1).C_raw-tSeries_BPM(1).C, 0, 2);
+% % [a, ind] = sort(snrs, 'descend');
+% 
+% fig_BPM = figure;
+% set(fig_BPM, 'Color', 'w')
+% tlen = 1200;
+% plot(tSeries_BPM(1).C_raw(ind(1:5), 21:20+tlen)'+repmat([1:5].*5, tlen, 1), 'LineWidth', 2)
+% set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'XTick', 0:200:tlen, 'XTickLabel', 0:20:tlen/10, 'LineWidth', 2)
+% 
+% print(fig_BPM, fullfile(dirFig, sprintf('exampleTS_Tabla_%s_BPM1_DFLsnr5', dateSession)), '-depsc')
 
 
 
