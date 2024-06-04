@@ -155,6 +155,20 @@ input('')
 end
 
 
+%% How the across-session correlation is related to overall response level?
+iSession = 1; %:length(setDateSession) %;
+dateSession = setDateSession{iSession};
+
+dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+dirPreproc = fullfile(dirProcdata_session, '_preproc');
+
+% dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
+
+load(sprintf('%s/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', directory.dirProcdata, nameSubj, dateSession))
+% load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
+
+
+
 %% In case I need the histogram values
 % figure;
 % h = histogram(sum(flagCell, 2));
