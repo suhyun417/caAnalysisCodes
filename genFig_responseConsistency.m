@@ -24,7 +24,7 @@ addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1; %2; %1; %2; %1;
+iSubj = 1; %2; %1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -75,8 +75,115 @@ for iCell = 1:length(nSessionRegistered)
     end
 end
 
+%% within session across trial correlation & between session trial-average correlation
+resultsCorr = struct([]);
+for iCell = 1:length(matDaysAcRegistration)
+    idCell = iCell;
+    
+    resultsCorr(iCell).maxDays = 0; % default
+     
+    if nSessionRegistered(iCell) > 1  
 
-%%
+        resultsCorr(iCell).idCell = idCell;
+
+        locSession = find(flagCell(idCell, :)>0);
+        maxDays = setDateSession_datenum(locSession(end)) - setDateSession_datenum(locSession(1));
+        setDApart = diff(setDateSession_datenum(locSession));
+        resultsCorr(iCell).maxDays = maxDays;
+        resultsCorr(iCell).setDApart = setDApart;
+
+        setT = [];
+        setT = cat(2, cat(1, 1, cellTS(idCell).nTrial1_set(1:end-1)+1), cellTS(idCell).nTrial1_set);
+        numT = diff(setT, 1, 2)+1;
+
+        ssTS = []; bssetrr_setD = [];
+        for iSSS = 1:length(numT)
+
+            rr = corr(cellTS(idCell).matTS_movie1(setT(iSSS,1):setT(iSSS,2),:)', 'type', 'Spearman');
+            setrr = tril(rr,-1);
+            setrr = setrr(abs(setrr)>0);
+            meanrr = mean(setrr);
+
+            resultsCorr(iCell).setR{iSSS} = setrr;
+            resultsCorr(iCell).meanR(iSSS,1) = meanrr;
+
+            % across-trial average TS
+            ssTS(:, iSSS) = mean(cellTS(idCell).matTS_movie1(setT(iSSS,1):setT(iSSS,2),:),1)';   
+
+            if iSSS < length(numT)
+            bssetrr_setD = cat(1, bssetrr_setD, cumsum(setDApart(iSSS:end)));
+            end
+
+%             figure(100);
+%             set(gcf, 'Color', 'w', 'Position', [652   823   906   271]);
+%             subplot(2,1,1)
+%             imagesc(cellTS(idCell).matTS_movie1(setT(iSSS,1):setT(iSSS,2),:))
+%             title(sprintf('Cell %d/%d:, Session %d/%d', iCell, length(matDaysAcRegistration), iSSS, length(numT)))
+%             subplot(2,1,2)
+%             plot(cellTS(idCell).matTS_movie1(setT(iSSS,1):setT(iSSS,2),:)')
+%             axis tight
+%             legend
+%             title(sprintf('mean rho = %2.3f', meanrr))
+%             input('')
+
+        end
+        
+        resultsCorr(iCell).grandMeanR = mean(resultsCorr(iCell).meanR); % within-session across-trial correlation
+
+        bsrr = corr(ssTS, 'type', 'Spearman');
+        bssetrr = tril(bsrr,-1);
+        bssetrr = bssetrr(abs(bssetrr)>0);
+        bsmeanrr = mean(bssetrr);
+
+        
+
+        resultsCorr(iCell).btsn_setR = bssetrr;
+        resultsCorr(iCell).btsn_meanR = bsmeanrr;
+        resultsCorr(iCell).btsn_setR_setD = bssetrr_setD;
+
+    else
+        continue;
+    end
+
+end
+
+% within-session across trial correlations
+setMaxD = cat(1, resultsCorr.maxDays);
+setCellID = cat(1, resultsCorr(setMaxD>0).idCell); % 199 cells 
+catGrandM_ws = cat(1, resultsCorr.grandMeanR);
+catSetR_ws = []; catSetR_ws_cellID = [];
+for iCell = 1:length(setCellID)
+    idCell = setCellID(iCell);
+    catSetR_ws = cat(1, catSetR_ws, resultsCorr(idCell).setR{:}); % all within-session trial pairs (n = 5697)
+    catSetR_ws_cellID = cat(1, catSetR_ws_cellID, repmat(idCell, length(cat(1, resultsCorr(idCell).setR{:})), 1));
+end
+
+% between session correlations
+catSetR_bs = cat(1, resultsCorr.btsn_setR); % n=2385 (pair-wise sessions)
+catMeanR_bs = cat(1, resultsCorr.btsn_meanR);
+catSetR_bs_days = cat(1, resultsCorr.btsn_setR_setD);
+catSetR_bs_cellID = [];
+for iCell = 1:length(setCellID)
+    idCell = setCellID(iCell);
+    catSetR_bs_cellID = cat(1, catSetR_bs_cellID, repmat(idCell, length(resultsCorr(idCell).btsn_setR), 1));
+end
+
+% matSetR_ws = cat(2, catSetR_ws, catSetR_ws_cellID);
+% matSetR_bs = cat(2, catSetR_bs, catSetR_bs_cellID, catSetR_bs_days);
+ 
+% compare within-session corr and between-session corr for each cell
+figure;
+set(gcf, 'Color', 'w')
+plot(catGrandM_ws, catMeanR_bs, 'o'); hold on;
+axis square
+xlabel('within-session across trial correlation')
+ylabel('across-session correlation')
+
+% save(fullfile(dirProcdata, sprintf('_marmoset/invivoCalciumImaging/%s/FOV%d/%s_FOV%d_movieRespCorr.mat',...
+%     nameSubj, FOV_ID, nameSubj, FOV_ID)), 'resultsCorr');
+
+
+%% correlation between 1st and last session that are at least 2 weeks apart
 locWeek = find(matDaysAcRegistration>=14);
 length(locWeek)
 
@@ -115,14 +222,14 @@ for iCell = 1:length(locWeek)
 end
 
 
-%%
+%% session TS examples
 figtemp = figure;
 set(gcf, 'color', 'w', 'Position', [401    35   378   862])
 
-tempSetC = find(matDaysAcRegistration>25);
-for iC = 1:length(tempSetC)
+% tempSetC = find(matDaysAcRegistration>25);
+% for iC = 1:length(tempSetC)
 
-idCell = tempSetC(iC); %34; %23;
+idCell = 104; %315; %tempSetC(iC); %34; %23;
 
 setT = []; avgT=[];
 setT = cat(2, cat(1, 1, cellTS(idCell).nTrial1_set(1:end-1)+1), cellTS(idCell).nTrial1_set);
@@ -152,20 +259,21 @@ title(sprintf('%s: Cell ID %d', nameSubj, idCell))
 % print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_CellID%d_avgTS_eachSession',nameSubj, FOV_ID, idCell)), '-depsc')
 
 input('')
-end
+% end
+
 
 
 %% How the across-session correlation is related to overall response level?
-iSession = 1; %:length(setDateSession) %;
-dateSession = setDateSession{iSession};
-
-dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
-dirPreproc = fullfile(dirProcdata_session, '_preproc');
-
-% dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
-
-load(sprintf('%s/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', directory.dirProcdata, nameSubj, dateSession))
-% load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
+% iSession = 1; %:length(setDateSession) %;
+% dateSession = setDateSession{iSession};
+% 
+% dirProcdata_session = fullfile(dirProcdata, '/_marmoset/invivoCalciumImaging/', nameSubj, 'Session', dateSession);
+% dirPreproc = fullfile(dirProcdata_session, '_preproc');
+% 
+% % dirFig = fullfile(dirProjects, '/0Marmoset/Ca/_labNote/_figs/');
+% 
+% load(sprintf('%s/_marmoset/invivoCalciumImaging/%s/Session/%s/DFL_ts_tML.mat', directory.dirProcdata, nameSubj, dateSession))
+% % load(sprintf('/nifvault/procdata/parksh/_marmoset/invivoCalciumImaging/%s/Session/%s/BPM_ts_tML.mat', nameSubj, dateSession))
 
 
 

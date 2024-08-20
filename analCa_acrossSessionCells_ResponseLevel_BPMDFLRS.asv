@@ -85,8 +85,8 @@ for iSubj = 1:2 %2; %1;
     load(fullfile(dirProcdata_session, 'BPM_ts_tML.mat'), 'tS_run', 'tS_session') % what's the difference?
     % prepare the cell traces
     matTS_BPM = [];
-    for iCell = 1:length(setCell)
-        matTS_BPM(:, iCell) = cat(1, tS_run(1).tS_trial(setCell(iCell),:).matTS); % this is C_raw
+    for iCell = 1:size(tS_session(1).tS_trial, 1)
+        matTS_BPM(:, iCell) = cat(1, tS_session(1).tS_trial(iCell,:).matTS); % this is C_raw % cat(1, tS_run(1).tS_trial(setCell(iCell),:).matTS); % this is C_raw
     end
 %     tS_session(1).tS_trial = cat(2, tS_run.tS_trial); % Cell by Trial
 
@@ -114,11 +114,24 @@ for iSubj = 1:2 %2; %1;
 
 
     % final data structure
-    % respBPM.mean(iCell, iSession) = x
+    % respBPM.mean(iCell, iSession) = x % does the mean activity in this case make sense?
     % respBPM.max(iCell, iSession) = x
     % respBPM.var(iCell, iSession) = x
     % respBPM.ste(iCell, iSession) = x
-    % respBPm.
+    % respBPM.varNoise(iCell, iSession) = x
+    % respBPM.nT(iCell, iSession) =length(xx); %
+    
+    % respDFL.max(iCell, iSession) = x
+    % respDFL.var(iCell, iSession) = x
+    % respDFL.ste(iCell, iSession) = x
+    % respDFL.varNoise(iCell, iSession) = x
+    % respDFL.nT(iCell, iSession) =length(xx); %
+
+    % respRS.max(iCell, iSession) = x
+    % respRS.var(iCell, iSession) = x
+    % respRS.ste(iCell, iSession) = x
+    % respRS.varNoise(iCell, iSession) = x
+    % respRS.nT(iCell, iSession) =length(xx); %
 
 
 

@@ -85,8 +85,8 @@ for iSubj = 1:2 %2; %1;
     load(fullfile(dirProcdata_session, 'BPM_ts_tML.mat'), 'tS_run', 'tS_session') % what's the difference?
     % prepare the cell traces
     matTS_BPM = [];
-    for iCell = 1:length(setCell)
-        matTS_BPM(:, iCell) = cat(1, tS_run(1).tS_trial(setCell(iCell),:).matTS); % this is C_raw
+    for iCell = 1:size(tS_session(1).tS_trial, 1)
+        matTS_BPM(:, iCell) = cat(1, tS_session(1).tS_trial(iCell,:).matTS); % this is C_raw % cat(1, tS_run(1).tS_trial(setCell(iCell),:).matTS); % this is C_raw
     end
 %     tS_session(1).tS_trial = cat(2, tS_run.tS_trial); % Cell by Trial
 
