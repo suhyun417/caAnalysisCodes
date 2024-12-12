@@ -3,18 +3,31 @@
 % To compute pupil size during stimulus presentation for each trial
 %
 
+%% Directory settings: need to be changed to fit your directory structure
+directory = setDir_shp;
+
+dirProjects = directory.dirProjects;
+dirProcdata = directory.dirProcdata;
+dirRawdata = directory.dirRawdata;
+dirFig = directory.dirFig;
+
+% for the purpose of this script, you can only need to change the line
+% below
+dirBHV = fullfile(dirRawdata, '/behavior/MonkeyLogic_Ca/'); % where you have all the .bhv2 files
+
 %% Define filename.
 % If you don't put in the full directory, Matlab will assume that this file is in the current directory
 % (current directory  = where you're executing this line)
-setSubjName = {'Tabla', 'Max'};
-for iSubj = 1:length(setSubjName)
+setSubj = {'Tabla', 1; 'Max', 3};
+for iSubj = 1:size(setSubj, 1)
     clear Results*
     
-    nameSubj =  setSubjName{iSubj}; %'Max'; %'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+    nameSubj =  setSubj{iSubj, 1}; %'Max'; %'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+    FOV_ID = setSubj{iSubj, 2};
     % dateSession = '20191113'; %'20191125';
     
     % get session info
-    [infoSession, opts] = readInfoSession(nameSubj);
+    [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
     S = table2struct(infoSession);
     
     % setExpName = {S.ExpName}';
@@ -28,11 +41,11 @@ for iSubj = 1:length(setSubjName)
         
         dateSession = filename(1:6);
         
-        if str2num(dateSession) < 191121
-            dirBHV = '/archive_rawdata1/parksh/behavior/MonkeyLogic_Ca/'; %
-        else
-            dirBHV = '/rawdata/parksh/behavior/MonkeyLogic_Ca/'; %
-        end
+%         if str2num(dateSession) < 191121
+%             dirBHV = '/archive_rawdata1/parksh/behavior/MonkeyLogic_Ca/'; %
+%         else
+%             dirBHV = '/rawdata/parksh/behavior/MonkeyLogic_Ca/'; %
+%         end
         
         % filename = '191121_Tabla_Ca_BPM_123909.bhv2'; % change it to a file you have
         

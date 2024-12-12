@@ -3,6 +3,19 @@
 % To compute pupil size during stimulus presentation for each trial
 % 
 
+%% Directory settings: need to be changed to fit your directory structure
+
+directory = setDir_shp;
+
+dirProjects = directory.dirProjects;
+dirProcdata = directory.dirProcdata;
+dirRawdata = directory.dirRawdata;
+dirFig = directory.dirFig;
+
+% for the purpose of this script, you can only need to change the line
+% below
+dirBHV = fullfile(dirRawdata, '/behavior/MonkeyLogic_Ca/'); % where you have all the .bhv2 files
+
 %% Define filename. 
 % If you don't put in the full directory, Matlab will assume that this file is in the current directory
 % (current directory  = where you're executing this line)
@@ -10,7 +23,8 @@ nameSubj =  'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 % dateSession = '20191113'; %'20191125';  
     
 % get session info
-[infoSession, opts] = readInfoSession(nameSubj);
+FOV_ID = 1;
+[infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
 S = table2struct(infoSession);
 
 % setExpName = {S.ExpName}';

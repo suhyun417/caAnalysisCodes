@@ -6,11 +6,12 @@
 %% Define filename. 
 % If you don't put in the full directory, Matlab will assume that this file is in the current directory
 % (current directory  = where you're executing this line)
-nameSubj =  'Max'; %'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+nameSubj =  'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 % dateSession = '20191113'; %'20191125';  
+FOV_ID = 1; %2;
     
 % get session info
-[infoSession, opts] = readInfoSession(nameSubj);
+[infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
 S = table2struct(infoSession);
 
 % setExpName = {S.ExpName}';
@@ -19,6 +20,7 @@ setMLFilename = {S.MLFilename}';
 indBPMRuns = contains(setMLFilename, 'BPM') & cat(1, S.flagPreproc)>0; %% containing "BPM" in filename AND flagPreproc value of 1
 setFilename = setMLFilename(indBPMRuns);
 
+Results_session = struct([]);
 for iFile = 1:length(setFilename)
 filename = strcat(setFilename{iFile}, '.bhv2');
 
@@ -29,7 +31,7 @@ if str2num(dateSession) < 191121
 else
     dirBHV = '/rawdata/parksh/behavior/MonkeyLogic_Ca/'; %
 end
-
+dirBHV = 'data folder';
 % filename = '191121_Tabla_Ca_BPM_123909.bhv2'; % change it to a file you have
 
 %% Read the file
@@ -133,8 +135,8 @@ end
 
 %% possible figures
 % pupil size to 5 different categories of images for two animals
-nameSubj = 'Tabla'; %'Max'; %'Tabla';
-load(sprintf('/procdata/parksh/_marmoset/behavior/eyeData_Ca/pupilSize_BPM_%s.mat', nameSubj))
+nameSubj = 'Max'; %'Tabla'; %'Max'; %'Tabla';
+load(sprintf('/home/parks23/data/procdata/parksh/_marmoset/behavior/eyeData_Ca/pupilSize_BPM_%s.mat', nameSubj))
 
 % Results_session(1).condName_all(Results_session(1).conditionType) % this prints out the name of conditions in this particular session
 

@@ -3,14 +3,28 @@
 % To compute pupil size during stimulus presentation for each trial
 % 
 
+%% Directory settings: need to be changed to fit your directory structure
+
+directory = setDir_shp;
+
+dirProjects = directory.dirProjects;
+dirProcdata = directory.dirProcdata;
+dirRawdata = directory.dirRawdata;
+dirFig = directory.dirFig;
+
+% for the purpose of this script, you can only need to change the line
+% below
+dirBHV = fullfile(dirRawdata, '/behavior/MonkeyLogic_Ca/'); % where you have all the .bhv2 files
+
 %% Define filename. 
 % If you don't put in the full directory, Matlab will assume that this file is in the current directory
 % (current directory  = where you're executing this line)
-nameSubj =  'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+nameSubj =  'Max'; %'Tabla'; %'Max'; 
+FOV_ID = 3; %1;
 % dateSession = '20191113'; %'20191125';  
     
 % get session info
-[infoSession, opts] = readInfoSession(nameSubj);
+[infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
 S = table2struct(infoSession);
 
 % setExpName = {S.ExpName}';
@@ -19,16 +33,17 @@ setMLFilename = {S.MLFilename}';
 indBPMRuns = contains(setMLFilename, 'BPM') & cat(1, S.flagPreproc)>0; %% containing "BPM" in filename AND flagPreproc value of 1
 setFilename = setMLFilename(indBPMRuns);
 
+clear Results*
 for iFile = 1:length(setFilename)
 filename = strcat(setFilename{iFile}, '.bhv2');
 
 dateSession = filename(1:6);
 
-if str2num(dateSession) < 191121
-    dirBHV = '/archive_rawdata1/parksh/behavior/MonkeyLogic_Ca/'; %
-else
-    dirBHV = '/rawdata/parksh/behavior/MonkeyLogic_Ca/'; %
-end
+% if str2num(dateSession) < 191121
+%     dirBHV = '/archive_rawdata1/parksh/behavior/MonkeyLogic_Ca/'; %
+% else
+%     dirBHV = fullfile(dirRawdata, '/parksh/behavior/MonkeyLogic_Ca/'); %
+% end
 
 % filename = '191121_Tabla_Ca_BPM_123909.bhv2'; % change it to a file you have
 
@@ -125,7 +140,8 @@ Results_session(iFile).Results_trial = Results_trial;
 % xlim([0 6])
 % ylabel('Pupil Size')
 
-save(sprintf('/procdata/parksh/_marmoset/behavior/eyeData_Ca/pupilSize_BPM_%s.mat', nameSubj), 'Results_session')
+save(sprintf('./pupilSize_BPM_%s.mat', nameSubj), 'Results_session');
+% save(fullfile(dirProcdata, sprintf('/_marmoset/behavior/eyeData_Ca/pupilSize_BPM_%s.mat', nameSubj)), 'Results_session')
 
 end
 
