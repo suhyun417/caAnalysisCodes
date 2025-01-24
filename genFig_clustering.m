@@ -1,4 +1,4 @@
-% genFig_2022SFN.m
+% genFig_clustering.m
 %
 % 2022/09/26 SHP
 %   - generate figures for 2022 SFN talk

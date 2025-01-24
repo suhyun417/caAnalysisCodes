@@ -155,8 +155,9 @@ end
 
 load(fullfile(dirProcdata_session, 'BPM_ts_tML.mat'), 'tS_run')
 
+%%% 1. draw all cells together, focus on MOV
 % set of the example cells 
-setCell = [40 9 73 82 21 4 35 41 79 36 23 29]; %[40 9 73 82 21 4 35 41 79 36 23 29];
+setCell = [9 73 82 29 36 79 41 4 35 21]; % changed order to show the larger movie response at the top
 
 % prepare the cell traces
 matTS_BPM = [];
@@ -173,34 +174,111 @@ matTS_RS = [];
 matTS_RS = tSeries_RS(1).C_raw(setCell, :)';
 
 
+cMap_lineColor = [102 194 165; 252 141 98; 141 106 203]./255;
+cMap_lineColor2 = [27 158 119; 217 95 2; 117 112 179]./255;
+
+% draw all the TS together: this time MOV-IMG-RS, and cell with larger MOV
+% responses come first
+widthBreak = 50;
+matTS_grand = [];
+matTS_grand = cat(1, matTS_DFL(1:1200,:), NaN(widthBreak, length(setCell)),...
+    matTS_BPM(1:1200, :), NaN(widthBreak, length(setCell)),...
+    matTS_RS(2100:2100+1199, :));
+
+fig_grand = figure;
+ylim = [2 36];
+BPM_stimOn = [11:46:1200]+1200+widthBreak;
+line(repmat(BPM_stimOn, 2, 1), repmat(ylim', 1, length(BPM_stimOn)), 'Color', ones(1,3).*0.5)
+hold on;
+DFL_stimOn = [200:200:1200];
+line(repmat(DFL_stimOn, 2, 1), repmat(ylim', 1, length(DFL_stimOn)), 'Color', ones(1,3).*0.5)
+
+p = plot(matTS_grand+repmat([1:length(setCell)].*3, size(matTS_grand, 1), 1), 'LineWidth', 2);
+set(p(1:3), 'Color', cMap_lineColor(1,:))
+set(p(4:6), 'Color', cMap_lineColor(2,:))
+set(p(7:10), 'Color', cMap_lineColor(3,:))
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'k', 'LineWidth', 2)
+axis tight
+set(gca, 'YLim', [2 36])
+
+% BPM_stimOn = [11:46:1200]+1200+widthBreak;
+% line(repmat(BPM_stimOn, 2, 1), repmat(get(gca, 'ylim')', 1, length(BPM_stimOn)), 'Color', ones(1,3).*0.5)
+% DFL_stimOn = [200:200:1200];
+% line(repmat(DFL_stimOn, 2, 1), repmat(get(gca, 'ylim')', 1, length(DFL_stimOn)), 'Color', ones(1,3).*0.5)
+
+set(fig_grand, 'Color', 'w', 'Position', [100   100   1594   924])
+setCell_str = sprintf('%d_', setCell);
+setCell_str = setCell_str(1:end-1);
+print(fig_grand, fullfile(dirFig, sprintf('%s_FOV%d_session%d_exCells_%s_MOV_IMG_RS', ...
+    nameSubj, FOV_ID, iSession, setCell_str)), '-r0', '-depsc');
+
+
+
+%%% 2. draw IMG, MOV, RS responses separately: 3 or 4 neurons for each  BPM>DFL, BPM<DFL, BPM=DFL 
+% set of the example cells 
+setCell = [40 9 73 21 4 35 79 36 23]; %[40 9 73 82 21 4 35 41 79 36 23 29]; %[40 9 73 82 21 4 35 41 79 36 23 29];
+
+% prepare the cell traces
+matTS_BPM = [];
+for iCell = 1:length(setCell)
+    matTS_BPM(:, iCell) = cat(1, tS_run(1).tS_trial(setCell(iCell),:).matTS); % this is C_raw
+end
+
+iRun = 1; iMovie = 1;
+matTS_DFL = [];
+matTS_DFL = tS_session(iMovie).matTS_C_raw(:, setCell, iRun);
+
+load(fullfile(dirProcdata_session, 'RS_ts.mat'))
+matTS_RS = [];
+matTS_RS = tSeries_RS(1).C_raw(setCell, :)';
+
+
+cMap_lineColor = [102 194 165; 252 141 98; 141 106 203]./255;
+cMap_lineColor2 = [27 158 119; 217 95 2; 117 112 179]./255;
 
 % plot BPM responses of a set of example cells with stim ON marks
 fig_BPM = figure;
-plot(matTS_BPM+repmat([1:length(setCell)].*3, size(matTS_BPM, 1), 1), 'LineWidth', 2)
+p = plot(matTS_BPM+repmat([1:length(setCell)].*3, size(matTS_BPM, 1), 1), 'LineWidth', 2);
 axis tight
 line(repmat(11:46:2208, 2, 1), repmat(get(gca, 'ylim')', 1, 48), 'Color', ones(1,3).*0.5)
 xlim([1 1200])
-set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w')
+set(p(1:3), 'Color', cMap_lineColor(1,:))
+set(p(4:6), 'Color', cMap_lineColor(2,:))
+set(p(7:9), 'Color', cMap_lineColor(3,:))
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'k', 'LineWidth', 2)
 set(fig_BPM, 'Color', 'w', 'Position', [385   185   500   940])
+% print(fig_BPM, fullfile(dirFig, sprintf('%s_FOV%d_session%d_exCells_BPMresp_group', ...
+%     nameSubj, FOV_ID, iSession)), '-r0', '-depsc');
 
 
 % plot DFL responses of a set of example cells
 fig_DFL = figure;
-plot(matTS_DFL+repmat([1:length(setCell)].*3, size(matTS_DFL, 1), 1), 'LineWidth', 2)
+p = plot(matTS_DFL+repmat([1:length(setCell)].*3, size(matTS_DFL, 1), 1), 'LineWidth', 2);
 axis tight
+line(repmat(200:200:1200, 2, 1), repmat(get(gca, 'ylim')', 1, 6), 'Color', ones(1,3).*0.5)
 xlim([1 1200])
-set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w')
-set(fig_DFL, 'Color', 'w', 'Position', [100   100   500   940])
+set(p(1:3), 'Color', cMap_lineColor(1,:))
+set(p(4:6), 'Color', cMap_lineColor(2,:))
+set(p(7:9), 'Color', cMap_lineColor(3,:))
+hold on;
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'k', 'LineWidth', 2)
+set(fig_DFL, 'Color', 'w', 'Position', [100   100   500   940]) 
+% print(fig_DFL, fullfile(dirFig, sprintf('%s_FOV%d_session%d_exCells_DFLresp_group', ...
+%     nameSubj, FOV_ID, iSession)), '-r0', '-depsc');
 
 
 % plot RS responses of a set of example cells
 fig_RS = figure;
-plot(matTS_RS+repmat([1:length(setCell)].*3, size(matTS_RS, 1), 1), 'LineWidth', 2)
+p = plot(matTS_RS+repmat([1:length(setCell)].*3, size(matTS_RS, 1), 1), 'LineWidth', 2);
 axis tight
 xlim([2100 2100+1199])
-set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w')
+set(p(1:3), 'Color', cMap_lineColor(1,:))
+set(p(4:6), 'Color', cMap_lineColor(2,:))
+set(p(7:9), 'Color', cMap_lineColor(3,:))
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YColor', 'w', 'LineWidth', 2)
 set(fig_RS, 'Color', 'w', 'Position', [100   100   500   940])
-
+% print(fig_RS, fullfile(dirFig, sprintf('%s_FOV%d_session%d_exCells_RSresp_group', ...
+%     nameSubj, FOV_ID, iSession)), '-r0', '-depsc');
 
 
 %% Mark these example cells in the FOV
@@ -262,8 +340,10 @@ end
 
 line([1 33], [265 265], 'Color', 'k', 'LineWidth', 5)
 
-% print(fullfile(dirFig, sprintf('%s_FOV%d_validCellContour_thr0p%d_session%d_gray_scaleBar_exCells', ...
-%     nameSubj, FOV_ID, thr*10, iSession)), '-r0', '-depsc');
+setCell_str = sprintf('%d_', setCell);
+setCell_str = setCell_str(1:end-1);
+print(fullfile(dirFig, sprintf('%s_FOV%d_validCellContour_thr0p%d_session%d_gray_scaleBar_exCells_%s', ...
+    nameSubj, FOV_ID, thr*10, iSession, setCell_str)), '-r0', '-depsc');
 
 
 
