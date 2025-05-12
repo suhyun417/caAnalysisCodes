@@ -226,7 +226,7 @@ ylabel('Within-cluster distance')
 % cells with more than 8 trials
 indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
 
-k = 5;
+k = 5; %4; %5;
 [a, b] = min(sum(Clustering_all(iSubj).resultKMeans(k-1).cell_sumD));
 IDXdfl = Clustering_all(iSubj).resultKMeans(k-1).cell_indCluster(:, b);
 [sortedIDXdfl, indCelldfl] = sort(IDXdfl);
@@ -236,14 +236,24 @@ indCell_sort{iType} = indCelldfl(sortedIDXdfl==iType);
 matTS_norm1(:, iType) = mean(matAvgTS1(:, indCell_sort{iType}), 2)';
 matTS_norm2(:, iType) = mean(matAvgTS2(:, indCell_sort{iType}), 2)';
 end
+
 %
+tempOrder = [1 3 5 4 2]; % re-organize the population plot for Max
+tempInd = []; tempID = [];
+for iK = 1:k
+tempInd = cat(1, tempInd, indCelldfl(sortedIDXdfl==tempOrder(iK)));
+tempID = cat(1, tempID, sortedIDXdfl(sortedIDXdfl==tempOrder(iK)));
+end
+
 
 figure;
 set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 340])
-imagesc(zscore(matAvgTS1(:, indCelldfl))')
+imagesc(zscore(matAvgTS1(:, tempInd))')
+% imagesc(zscore(matAvgTS1(:, indCelldfl))')
 colormap(hot)
-set(gca, 'CLim', [-2 10])
-set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
+set(gca, 'CLim', [-1 10])%Max %, [-2 10]) % Tabla
+set(gca, 'YTick', find(abs(diff(tempID))>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
+% set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
 % print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_matTS_neg1pos8'), '-r200', '-dtiff')
 
 figure;
@@ -260,10 +270,12 @@ set(gca, 'XTickLabel', 20:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off'
 % Same groups for movie 2
 figure;
 set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 340])
-imagesc(zscore(matAvgTS2(:, indCelldfl))')
+imagesc(zscore(matAvgTS2(:, tempInd))')
+% imagesc(zscore(matAvgTS2(:, indCelldfl))')
 colormap(hot)
-set(gca, 'CLim', [-2 10])
-set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
+set(gca, 'CLim', [-1 10])%Max %, [-2 10]) % Tabla
+set(gca, 'YTick', find(abs(diff(tempID))>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
+% set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
 % print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_matTS_neg1pos8'), '-r200', '-dtiff')
 
 figure;
