@@ -45,7 +45,7 @@ addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 2; %1; %2; %1; %2; %1; %2; %1;
+iSubj = 2; %1; %2; %1; %2; %1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -238,7 +238,7 @@ matTS_norm2(:, iType) = mean(matAvgTS2(:, indCell_sort{iType}), 2)';
 end
 
 %
-tempOrder = [1 3 5 4 2]; % re-organize the population plot for Max
+tempOrder = [1 2 3 4 5]; %[1 3 5 4 2]; % re-organize the population plot for Max
 tempInd = []; tempID = [];
 for iK = 1:k
 tempInd = cat(1, tempInd, indCelldfl(sortedIDXdfl==tempOrder(iK)));
@@ -258,7 +258,7 @@ set(gca, 'YTick', find(abs(diff(tempID))>0), 'XTickLabel', 20:20:120, 'TickDir',
 
 figure;
 set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 200])
-plot(zscore(matTS_norm1), 'LineWidth', 2)
+plot(zscore(matTS_norm1(:,tempOrder)), 'LineWidth', 1)
 cMap_sort = hsv(k);
 cMap_sort(2,:) = [206 182 49]./255;
 colororder(cMap_sort)
@@ -280,7 +280,7 @@ set(gca, 'YTick', find(abs(diff(tempID))>0), 'XTickLabel', 20:20:120, 'TickDir',
 
 figure;
 set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 200])
-plot(zscore(matTS_norm2), 'LineWidth', 2)
+plot(zscore(matTS_norm2(:,tempOrder)), 'LineWidth', 1)
 cMap_sort = hsv(k);
 cMap_sort(2,:) = [206 182 49]./255;
 colororder(cMap_sort)
@@ -289,7 +289,35 @@ set(gca, 'XTickLabel', 20:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off'
 % print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_avgTS_zscore'), '-depsc')
 
 
+% Group TS visualized separately
+figTS = figure;
+set(figTS, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 430])
+for iK = 1:k
+figure(figTS); hold on;
+plot(zscore(matTS_norm1(:,tempOrder(iK)))+5*(5-iK), 'LineWidth', 1, 'Color', cMap_sort(iK,:));
+end
+line(repmat([0 1201]', 1, 5), repmat([0 5 10 15 20], 2, 1), 'Color', ones(1,3).*0.5)
+axis tight
+ylim([-5 28])
+set(gca, 'YTick', 0:5:20, 'YTickLabel', [], 'XTickLabel', 0:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
 
+
+figTS2 = figure;
+set(figTS2, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 430])
+for iK = 1:k
+figure(figTS2); hold on;
+plot(zscore(matTS_norm2(:,tempOrder(iK)))+5*(5-iK), 'LineWidth', 1, 'Color', cMap_sort(iK,:));
+end
+line(repmat([0 1201]', 1, 5), repmat([0 5 10 15 20], 2, 1), 'Color', ones(1,3).*0.5)
+axis tight
+ylim([-5 28])
+set(gca, 'YTick', 0:5:20, 'YTickLabel', [], 'XTickLabel', 0:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
+
+
+
+
+
+%%% FOV
 figure;
 set(gcf, 'Color', 'w')
 cMap_sort = hsv(k);
@@ -315,46 +343,46 @@ set(gca, 'XTick', [], 'YTick', [])
 
 
 
-
-% Plotting
-fig_summary_DFL = figure;
-set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
-clear sp
-
-% 2. Clustering results on 2-d PC space
-figure(fig_summary_DFL);
-sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
-cMap_sort = hsv(k);
-for iType = 1:k
-plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
-hold on;
-end
-legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5', 'Cluster 6','Location', 'best')
-xlabel(sprintf('PC 1: explained %2.2f %% var', explained(1)))
-ylabel(sprintf('PC 2: explained %2.2f %% var', explained(2)))
-set(gca, 'TickDir', 'out')
-box off
-axis square
-title('Clustering based on movie response on PC space')
-% 3. Clustering results on imaging field of view
-figure(fig_summary_DFL);
-sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
-cMap_sort = hsv(k);
-[d1 d2] = size(infoCells(1).imgFOV);
-% imagesc(imgFOV);
-% colormap(sp(3), gray);
+% %%%%%%%%%%%%%%%%%%%%%%%%%%
+% % Plotting
+% fig_summary_DFL = figure;
+% set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
+% clear sp
+% 
+% % 2. Clustering results on 2-d PC space
+% figure(fig_summary_DFL);
+% sp(2) = subplot('Position', [0.1 0.1 0.4 0.4]);
+% cMap_sort = hsv(k);
+% for iType = 1:k
+% plot(score(indCell_sort{iType}, 1), score(indCell_sort{iType}, 2), 'o', 'MarkerFaceColor', cMap_sort(iType, :));
 % hold on;
-for iType = 1:k
-for iC = 1:size(indCell_sort{iType}, 1)
-Coor = cellPix(indCellValid(indCell_sort{iType}(iC, 1))).contourCell{1};
-plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :)); hold on;
-% text(Coor(1,end), Coor(2,end), num2str(indCell_sort{iType}(iC, 1)), ...
-%         'color', 'k')
-end
-end
-axis on
-set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20], 'Color', 'k')
-
+% end
+% legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5', 'Cluster 6','Location', 'best')
+% xlabel(sprintf('PC 1: explained %2.2f %% var', explained(1)))
+% ylabel(sprintf('PC 2: explained %2.2f %% var', explained(2)))
+% set(gca, 'TickDir', 'out')
+% box off
+% axis square
+% title('Clustering based on movie response on PC space')
+% % 3. Clustering results on imaging field of view
+% figure(fig_summary_DFL);
+% sp(3) = subplot('Position', [0.55 0.1 0.4 0.4]);
+% cMap_sort = hsv(k);
+% [d1 d2] = size(infoCells(1).imgFOV);
+% % imagesc(imgFOV);
+% % colormap(sp(3), gray);
+% % hold on;
+% for iType = 1:k
+% for iC = 1:size(indCell_sort{iType}, 1)
+% Coor = cellPix(indCellValid(indCell_sort{iType}(iC, 1))).contourCell{1};
+% plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :)); hold on;
+% % text(Coor(1,end), Coor(2,end), num2str(indCell_sort{iType}(iC, 1)), ...
+% %         'color', 'k')
+% end
+% end
+% axis on
+% set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20], 'Color', 'k')
+% 
 
 
 
