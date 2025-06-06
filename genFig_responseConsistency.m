@@ -6,7 +6,9 @@
 %   - example neurons, populations
 %   - over different timescale
 %   - over different aspects, e.g. selectivity, fluctuations etc.
+% likely the figure 4 of manuscript
 
+clear all;
 
 %% Directory settings
 directory = setDir_shp;
@@ -56,7 +58,169 @@ load(fname_caTSFOV, 'cellTS', 'cellPix')
 
 
 
+%% trial-to-trial heatmap of movie 1 responses for each neuron
+indCellValid = find(cat(1, cellTS.nTrial1_total)>8); % 
 
+setCell_ID = [2, 22, 141, 14, 31, 34, 181, 75]; % Indices of example neurons (out of 337 cells)
+
+for iCell = 1:length(setCell_ID)
+    idCell = setCell_ID(iCell);
+    figure;
+    set(gcf, 'Color', 'w', 'Position', [100 100 850 170])
+    subplot('Position', [0 0 1 1])
+    imagesc(zscore(cellTS(idCell).matTS_movie1')');
+    colormap("hot")
+    set(gca, 'Box', 'off', 'CLim', [-1 9])
+    axis off
+    print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_respHeatmap_alltrials_cellID%03d_337_cLim-19', nameSubj, FOV_ID, idCell)), '-depsc')
+    print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_respHeatmap_alltrials_cellID%03d_337_cLim-19', nameSubj, FOV_ID, idCell)), '-r300', '-dtiff')
+end
+
+
+%% Spatial map
+% get an average center coords
+centerCoords = [];
+for iC = 1:length(cellPix)
+    curMean = mean(cellPix(iC).centerCell, 1);
+    centerCoords(iC, 1) = curMean(1);
+    centerCoords(iC, 2) = curMean(2);
+end
+
+
+% all cells
+tempA = cat(2, cellPix(:).repPix);
+tempA(~isnan(tempA)) = 1;
+ 
+% % selected cells
+% tempA = cat(2, cellPix(indCellValid).repPix);
+% tempA(~isnan(tempA)) = 1;
+% % tempA(:, indCellValid) = tempA(:, indCellValid).*10;
+
+imgCells = sum(tempA, 2, 'omitnan');
+imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
+
+figure;
+set(gcf, 'Color', 'w')
+subplot('Position', [0 0 1 1])
+imagesc(imgCells_2d)
+colormap(gray)
+set(gca, 'CLim', [0 0.5])
+truesize
+box off
+axis off
+% print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellMap_allCells_truesize', nameSubj, FOV_ID)), '-depsc')
+
+setCell_ID = [2, 22, 141, 14, 31, 34, 181, 75]; % Indices of example neurons (out of 337 cells)
+
+figure;
+set(gcf, 'Color', 'w')
+% cMap_sort = hsv(k);
+% cMap_sort(2,:) = [206 182 49]./255
+% cMap_sort = [215 25 28; 253 174 97; 255 255 191; 171 217 233; 44 123 182]./255;
+% cMap_sort = [208 28 139; 241 182 218; 247 247 247; 184 225 134; 77 172 38]./255;
+[d1 d2] = size(infoCells(1).imgFOV);
+% imagesc(zeros(size(infoCells(1).imgFOV)));
+% colormap(gray)
+% imagesc(imgFOV);
+% colormap(sp(3), gray);
+% hold on;
+% for iType = 1:k
+for iC = 1:size(cellPix, 2)
+Coor = cellPix(iC).contourCell{1};
+p = plot(Coor(1,:), Coor(2,:), '.', 'Color', ones(1,3).*0.75); hold on;
+if ismember(iC, setCell_ID)
+%     locC = find(setCell_ID==iC);
+    p.Color = [0 0 0];
+end
+% text(Coor(1,end), Coor(2,end), num2str(indCellValid(indCell_sort{iType}(iC, 1))), ...
+%         'color', 'k')
+end
+% end
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20]) %, 'Color', 'k', 'Box', 'off')
+axis equal
+axis off
+line([300 300-(100/3.125)], [290 290], 'color', 'k', 'LineWidth', 5) % scale bar for 100 um (1px = 3.125um)
+set(gca, 'XTick', [], 'YTick', [], 'Box', 'off')
+setCellID_str = sprintf('%d_', setCell_ID);
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_allCellgray0p75_setCellID%s_black',nameSubj, FOV_ID, setCellID_str)), '-depsc')
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_allCellgray0p75_setCellID%s_black',nameSubj, FOV_ID, setCellID_str)), '-r300', '-dtiff')
+
+
+%% session TS examples
+figtemp = figure;
+set(gcf, 'color', 'w', 'Position', [401    35   378   862])
+
+% tempSetC = find(matDaysAcRegistration>25);
+% for iC = 1:length(tempSetC)
+
+setCell_ID = [2, 22, 141, 14, 31, 34, 181, 75]; % Indices of example neurons (out of 337 cells)
+
+for iCell = 1:length(setCell_ID)
+idCell = setCell_ID(iCell); %104; %315; %tempSetC(iC); %34; %23;
+curMatTS_movie1 = [];
+curMatTS_movie1 = zscore(cellTS(idCell).matTS_movie1')';
+
+
+setT = []; avgT=[];
+setT = cat(2, cat(1, 1, cellTS(idCell).nTrial1_set(1:end-1)+1), cellTS(idCell).nTrial1_set);
+for iSS = 1:length(setT)
+    avgT(:,iSS) = mean(curMatTS_movie1(setT(iSS,1):setT(iSS,2),:),1)'; %mean(cellTS(idCell).matTS_movie1(setT(iSS,1):setT(iSS,2),:),1)';
+end
+
+
+stringNameSession= cat(1, setDateSession{cellTS(idCell).idAcrossSession(:,1)}); % get date
+cMap = cool(length(setT));
+
+figtemp = figure;
+set(gcf, 'color', 'w', 'Position', [401    35   378   862])
+figure(figtemp); cla;
+for iSS = 1:length(setT)
+figure(figtemp);
+ydata = avgT(:,iSS)+5*(iSS-1);
+plot(ydata, 'color', cMap(iSS,:)); %, 'LineWidth', 1.5);
+ytick(iSS) = mean(ydata);
+hold on;
+end
+axis tight
+set(gca, 'TickDir', 'out', 'box', 'off')
+set(gca, 'YTick', ytick, 'YTicklabel', stringNameSession)
+set(gca,'XTick', 200:200:1200, 'XTickLabel', 20:20:120)
+title(sprintf('%s: Cell ID %d', nameSubj, idCell))
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_CellID%d_avgTS_eachSession_z',nameSubj, FOV_ID, idCell)), '-depsc')
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_CellID%d_avgTS_eachSession_z',nameSubj, FOV_ID, idCell)), '-r300', '-dtiff')
+
+
+figtemp2 = figure;
+set(gcf, 'color', 'w', 'Position', [401    35   556   289])
+alpha = 0.2;
+figure(figtemp2); cla;
+for iSS = 1:length(setT)
+figure(figtemp2);
+% ydata = avgT(:,iSS); %+50*(iSS-1);
+p = plot(avgT(:,iSS)); %, 'color', cMap(iSS,:)); %, 'LineWidth', 1.5);
+p.Color = [cMap(iSS,:) alpha];
+p.LineWidth = 2;
+% ytick(iSS) = mean(ydata);
+hold on;
+end
+axis tight
+set(gca, 'TickDir', 'out', 'box', 'off')
+% set(gca, 'YTick', ytick, 'YTicklabel', stringNameSession)
+set(gca,'XTick', 200:200:1200, 'XTickLabel', 20:20:120)
+title(sprintf('%s: Cell ID %d', nameSubj, idCell))
+print(figtemp2, fullfile(dirFig, sprintf('%s_FOV%d_CellID%d_avgTS_eachSession_overlayZ0p2',nameSubj, FOV_ID, idCell)), '-depsc')
+print(figtemp2, fullfile(dirFig, sprintf('%s_FOV%d_CellID%d_avgTS_eachSession_overlayZ0p2',nameSubj, FOV_ID, idCell)), '-r300', '-dtiff')
+
+% input('')
+end
+
+
+
+
+
+
+%%%%%%
+%% Corelation within and across sessions (obsolete as of 2025/05, as we decided to exclude)
 %%
 flagCell = ~isnan(cellIDAcrossDay);
 
@@ -220,46 +384,6 @@ for iCell = 1:length(locWeek)
     plot(matAvgTS_2(:,iCell), 'bo-');
     input('')
 end
-
-
-%% session TS examples
-figtemp = figure;
-set(gcf, 'color', 'w', 'Position', [401    35   378   862])
-
-% tempSetC = find(matDaysAcRegistration>25);
-% for iC = 1:length(tempSetC)
-
-idCell = 104; %315; %tempSetC(iC); %34; %23;
-
-setT = []; avgT=[];
-setT = cat(2, cat(1, 1, cellTS(idCell).nTrial1_set(1:end-1)+1), cellTS(idCell).nTrial1_set);
-for iSS = 1:length(setT)
-    avgT(:,iSS) = mean(cellTS(idCell).matTS_movie1(setT(iSS,1):setT(iSS,2),:),1)';
-end
-
-
-stringNameSession= cat(1, setDateSession{cellTS(idCell).idAcrossSession(:,1)}); % get date
-cMap = cool(length(setT));
-
-% figtemp = figure;
-% set(gcf, 'color', 'w', 'Position', [401    35   378   862])
-figure(figtemp); cla;
-for iSS = 1:length(setT)
-figure(figtemp);
-ydata = avgT(:,iSS)+50*(iSS-1);
-plot(ydata, 'color', cMap(iSS,:));
-ytick(iSS) = mean(ydata);
-hold on;
-end
-axis tight
-set(gca, 'TickDir', 'out', 'box', 'off')
-set(gca, 'YTick', ytick, 'YTicklabel', stringNameSession)
-set(gca,'XTick', 200:200:1200, 'XTickLabel', 20:20:120)
-title(sprintf('%s: Cell ID %d', nameSubj, idCell))
-% print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_CellID%d_avgTS_eachSession',nameSubj, FOV_ID, idCell)), '-depsc')
-
-input('')
-% end
 
 
 
