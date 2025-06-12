@@ -214,7 +214,7 @@ matTS_norm2(:, iType) = mean(matAvgTS2(:, indCell_sort{iType}), 2)';
 end
 
 %
-tempOrder = [1 3 5 4 2]; %[1 2 3 4 5]; %[1 3 5 4 2]; % re-organize the population plot for Max
+tempOrder = [1 2 3 4 5]; %[1 3 5 4 2]; %[1 2 3 4 5]; %[1 3 5 4 2]; % re-organize the population plot for Max
 tempInd = []; tempID = [];
 for iK = 1:k
 tempInd = cat(1, tempInd, indCelldfl(sortedIDXdfl==tempOrder(iK)));
