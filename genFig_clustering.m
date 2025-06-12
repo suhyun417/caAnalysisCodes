@@ -45,7 +45,7 @@ addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 2; %1; %2; %1; %2; %1; %2; %1; %2; %1;
+iSubj = 1; %2; %1; %2; %1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -142,30 +142,6 @@ end
 
 % explained(1:10)
 
-%% spatial map
-% all cells
-tempA = cat(2, cellPix(:).repPix);
-tempA(~isnan(tempA)) = 1;
-
-% % selected cells
-% tempA = cat(2, cellPix(indCellValid).repPix);
-% tempA(~isnan(tempA)) = 1;
-% % tempA(:, indCellValid) = tempA(:, indCellValid).*10;
-
-imgCells = sum(tempA, 2, 'omitnan');
-imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
-
-figure;
-set(gcf, 'Color', 'w')
-subplot('Position', [0 0 1 1])
-imagesc(imgCells_2d)
-colormap(gray)
-set(gca, 'CLim', [0 0.5])
-truesize
-box off
-axis off
-% print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellMap_allCells_truesize', nameSubj, FOV_ID)), '-depsc')
-
 
 %% Explained Variance plot
 setK = paramClustering.setK; %Clustering.setK;
@@ -238,60 +214,99 @@ matTS_norm2(:, iType) = mean(matAvgTS2(:, indCell_sort{iType}), 2)';
 end
 
 %
-tempOrder = [1 2 3 4 5]; %[1 3 5 4 2]; % re-organize the population plot for Max
+tempOrder = [1 3 5 4 2]; %[1 2 3 4 5]; %[1 3 5 4 2]; % re-organize the population plot for Max
 tempInd = []; tempID = [];
 for iK = 1:k
 tempInd = cat(1, tempInd, indCelldfl(sortedIDXdfl==tempOrder(iK)));
 tempID = cat(1, tempID, sortedIDXdfl(sortedIDXdfl==tempOrder(iK)));
 end
 
+% Colormap for clusters
+% Okabe-Ito palette
+cMap_sort = [0 0 0;...% black
+    0.9020 0.6235 0;...% orange
+    0.3373 0.7059 0.9137;... % sky blue
+    0 0.6196 0.4510;... % bluish green
+    0.8 0.4745 0.6549]; % reddish purple
+% % Tol's Bright color palette
+% cMap_sort = [68 119 170;...% Blue
+%     238 102 119;...% Rose
+%     34 136 51;... % Green
+%     204 187 68;... % Yellow
+%     102 204 238]./255; % Cyan
+% % Tol's Muted color palette
+% cMap_sort = [204 102 119;...% Rose
+%     51 34 136;...% Indigo
+%     221 204 119;... % Sand
+%     17 119 51;... % Teal
+%     136 34 85]./255; % Wine
 
+% Time series heatmap
 figure;
-set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 340])
+set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 600])
+subplot('Position', [0 0 1 1])
 imagesc(zscore(matAvgTS1(:, tempInd))')
 % imagesc(zscore(matAvgTS1(:, indCelldfl))')
 colormap(hot)
+set(gca, 'CLim', [-1 9]) % Tabla
+if iSubj == 2
 set(gca, 'CLim', [-1 10])%Max %, [-2 10]) % Tabla
-set(gca, 'YTick', find(abs(diff(tempID))>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
+end
+hold on
+line(repmat([0 1201]', 1, 4), repmat(find(abs(diff(tempID))>0), 1, 2)', 'COlor', 'w', 'LineWidth', 3)
+% set(gca, 'YTick', find(abs(diff(tempID))>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
 % set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
-% print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_matTS_neg1pos8'), '-r200', '-dtiff')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_matTS_neg1pos10', nameSubj, k)), '-r300', '-dtiff')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_matTS_neg1pos10', nameSubj, k)), '-depsc')
 
+% Cluster average time series
 figure;
-set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 200])
-plot(zscore(matTS_norm1(:,tempOrder)), 'LineWidth', 1)
-cMap_sort = hsv(k);
-cMap_sort(2,:) = [206 182 49]./255;
+set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 150])
+% subplot('Position', [0.01 0.05 1 1])
+plot(zscore(matTS_norm1(:,tempOrder)), 'LineWidth', 2)
+% cMap_sort = hsv(k);
+% cMap_sort(2,:) = [206 182 49]./255;
 colororder(cMap_sort)
 axis tight
-set(gca, 'XTickLabel', 20:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
-% print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_avgTS_zscore'), '-depsc')
+set(gca, 'XTick', 200:200:1200, 'XTickLabel', [], 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_avgTS_zscore', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_avgTS_zscore', nameSubj, k)), '-r300', '-dtiff')
 
 
 % Same groups for movie 2
 figure;
-set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 340])
+set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 600])
+subplot('Position', [0 0 1 1])
 imagesc(zscore(matAvgTS2(:, tempInd))')
 % imagesc(zscore(matAvgTS2(:, indCelldfl))')
 colormap(hot)
+set(gca, 'CLim', [-1 9]) % Tabla
+if iSubj == 2
 set(gca, 'CLim', [-1 10])%Max %, [-2 10]) % Tabla
-set(gca, 'YTick', find(abs(diff(tempID))>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
-% set(gca, 'YTick', find(diff(sortedIDXdfl)>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
-% print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_matTS_neg1pos8'), '-r200', '-dtiff')
+end
+hold on
+line(repmat([0 1201]', 1, 4), repmat(find(abs(diff(tempID))>0), 1, 2)', 'COlor', 'w', 'LineWidth', 3)
+% set(gca, 'YTick', find(abs(diff(tempID))>0), 'XTickLabel', 20:20:120, 'TickDir', 'out')
+print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_matTS_neg1pos10', nameSubj, k)), '-r300', '-dtiff')
+print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_matTS_neg1pos10', nameSubj, k)), '-depsc')
 
 figure;
-set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 1000 200])
-plot(zscore(matTS_norm2(:,tempOrder)), 'LineWidth', 1)
-cMap_sort = hsv(k);
-cMap_sort(2,:) = [206 182 49]./255;
+set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 150])
+% subplot('Position', [0 0 1 1])
+plot(zscore(matTS_norm2(:,tempOrder)), 'LineWidth', 2)
+% cMap_sort = hsv(k);
+% cMap_sort(2,:) = [206 182 49]./255;
 colororder(cMap_sort)
 axis tight
-set(gca, 'XTickLabel', 20:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
-% print(fullfile(dirFig, 'DFL1_Clustering_Tabla_5Clusters_avgTS_zscore'), '-depsc')
+set(gca, 'XTick', 200:200:1200, 'XTickLabel', [], 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
+print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_avgTS_zscore', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_avgTS_zscore', nameSubj, k)), '-r300', '-dtiff')
+
 
 
 % Group TS visualized separately
 figTS = figure;
-set(figTS, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 430])
+set(figTS, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 600])
 for iK = 1:k
 figure(figTS); hold on;
 plot(zscore(matTS_norm1(:,tempOrder(iK)))+5*(5-iK), 'LineWidth', 1, 'Color', cMap_sort(iK,:));
@@ -300,10 +315,13 @@ line(repmat([0 1201]', 1, 5), repmat([0 5 10 15 20], 2, 1), 'Color', ones(1,3).*
 axis tight
 ylim([-5 28])
 set(gca, 'YTick', 0:5:20, 'YTickLabel', [], 'XTickLabel', 0:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_avgTS_zscore_separate', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_avgTS_zscore_separate', nameSubj, k)), '-r300', '-dtiff')
+
 
 
 figTS2 = figure;
-set(figTS2, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 430])
+set(figTS2, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 600])
 for iK = 1:k
 figure(figTS2); hold on;
 plot(zscore(matTS_norm2(:,tempOrder(iK)))+5*(5-iK), 'LineWidth', 1, 'Color', cMap_sort(iK,:));
@@ -312,6 +330,9 @@ line(repmat([0 1201]', 1, 5), repmat([0 5 10 15 20], 2, 1), 'Color', ones(1,3).*
 axis tight
 ylim([-5 28])
 set(gca, 'YTick', 0:5:20, 'YTickLabel', [], 'XTickLabel', 0:20:120, 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
+print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_avgTS_zscore_separate', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_avgTS_zscore_separate', nameSubj, k)), '-r300', '-dtiff')
+
 
 
 
@@ -320,8 +341,8 @@ set(gca, 'YTick', 0:5:20, 'YTickLabel', [], 'XTickLabel', 0:20:120, 'LineWidth',
 %%% FOV
 figure;
 set(gcf, 'Color', 'w')
-cMap_sort = hsv(k);
-cMap_sort(2,:) = [206 182 49]./255
+% cMap_sort = hsv(k);
+% cMap_sort(2,:) = [206 182 49]./255
 % cMap_sort = [215 25 28; 253 174 97; 255 255 191; 171 217 233; 44 123 182]./255;
 % cMap_sort = [208 28 139; 241 182 218; 247 247 247; 184 225 134; 77 172 38]./255;
 [d1 d2] = size(infoCells(1).imgFOV);
@@ -331,19 +352,101 @@ cMap_sort(2,:) = [206 182 49]./255
 % colormap(sp(3), gray);
 % hold on;
 for iType = 1:k
-for iC = 1:size(indCell_sort{iType}, 1)
-Coor = cellPix(indCellValid(indCell_sort{iType}(iC, 1))).contourCell{1};
-plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :)); hold on;
-text(Coor(1,end), Coor(2,end), num2str(indCellValid(indCell_sort{iType}(iC, 1))), ...
-        'color', 'k')
+    for iC = 1:size(indCell_sort{iType}, 1)
+        Coor = cellPix(indCellValid(indCell_sort{iType}(iC, 1))).contourCell{1};
+        plot(Coor(1,:), Coor(2,:), '.', 'Color', cMap_sort(iType, :), 'MarkerSize', 12); hold on;
+        % text(Coor(1,end), Coor(2,end), num2str(indCellValid(indCell_sort{iType}(iC, 1))), ...
+        %         'color', 'k')
+    end
 end
-end
+axis tight
+axis equal
 set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20]) %, 'Color', 'k', 'Box', 'off')
 set(gca, 'XTick', [], 'YTick', [])
+hold on
+% line([300 300-(100/3.125)], [290 290], 'color', 'k', 'LineWidth', 5) % scale bar for 100 um (1px = 3.125um)
+% print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOV', nameSubj, k)), '-depsc')
+% print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOV', nameSubj, k)), '-r300', '-dtiff')
+
+% style #2
+figure;
+set(gcf, 'Color', 'w')
+[d1 d2] = size(infoCells(1).imgFOV);
+for iType = 1:k
+    for iC = 1:size(indCell_sort{iType}, 1)
+        curCenter = mean(cellPix(indCellValid(indCell_sort{iType}(iC, 1))).centerCell, 1);
+        curcenter_um = curCenter*3.125;
+        plot(curcenter_um(2), curcenter_um(1), 'Marker', 'x', ...
+            'Color', cMap_sort(iType, :), ...
+            'MarkerSize', 10, 'LineWidth', 2); hold on;
+    end
+end
+axis equal
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20].*3.125, 'YLim', [0-20 d1+20].*3.125) %, 'Color', 'k', 'Box', 'off')
+set(gca, 'YTick', 0:200:800)
+set(gca, 'TickDir', 'out', 'Box', 'on')
+if iSubj == 2
+    set(gca, 'YTickLabelRotation', 270, 'XAxisLocation', 'top', 'XTickLabelRotation', 270, ...
+        'XTickLabel', 600:-200:0)
+end
+grid on;
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_x', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_x', nameSubj, k)), '-r300', '-dtiff')
+
+% style #2
+figure;
+set(gcf, 'Color', 'w')
+[d1 d2] = size(infoCells(1).imgFOV);
+for iType = 1:k
+    for iC = 1:size(indCell_sort{iType}, 1)
+        curCenter = mean(cellPix(indCellValid(indCell_sort{iType}(iC, 1))).centerCell, 1);
+        curcenter_um = curCenter*3.125;
+        plot(curcenter_um(2), curcenter_um(1), 'Marker', 'o', ...
+            'MarkerFaceColor', cMap_sort(iType, :), 'MarkerEdgeColor', 'w',...
+            'MarkerSize', 10, 'LineWidth', 2); hold on;
+    end
+end
+axis equal
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20].*3.125, 'YLim', [0-20 d1+20].*3.125) %, 'Color', 'k', 'Box', 'off')
+set(gca, 'YTick', 0:200:800)
+set(gca, 'TickDir', 'out', 'Box', 'on')
+if iSubj == 2
+    set(gca, 'YTickLabelRotation', 270, 'XAxisLocation', 'top', 'XTickLabelRotation', 270, ...
+        'XTickLabel', 600:-200:0)
+end
+grid on
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_o', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_o', nameSubj, k)), '-r300', '-dtiff')
+
 
 
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% spatial map
+% % all cells
+% tempA = cat(2, cellPix(:).repPix);
+% tempA(~isnan(tempA)) = 1;
+% 
+% % % selected cells
+% % tempA = cat(2, cellPix(indCellValid).repPix);
+% % tempA(~isnan(tempA)) = 1;
+% % % tempA(:, indCellValid) = tempA(:, indCellValid).*10;
+% 
+% imgCells = sum(tempA, 2, 'omitnan');
+% imgCells_2d = reshape(imgCells, size(infoCells(1).imgFOV));
+% 
+% figure;
+% set(gcf, 'Color', 'w')
+% subplot('Position', [0 0 1 1])
+% imagesc(imgCells_2d)
+% colormap(gray)
+% set(gca, 'CLim', [0 0.5])
+% truesize
+% box off
+% axis off
+% % print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_cellMap_allCells_truesize', nameSubj, FOV_ID)), '-depsc')
+% 
+
 % % Plotting
 % fig_summary_DFL = figure;
 % set(gcf,  'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [100 100 1085 750])
@@ -386,70 +489,70 @@ set(gca, 'XTick', [], 'YTick', [])
 
 
 
-%% Read source data
-addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
-cnmfe_setup;
-d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
-
-load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
-
-validIndCell = [];
-validIndCell(:,1) = 1:length(neuron.ids);
-if strcmpi(nameSubj, 'max')
-    load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
-    validIndCell = indCell.validCell;
-end
-
-
-% get the contours and image field of view
-% neuron_b = neuron.batches{1}.neuron;
-
-% Generate cell location map within FOV
-thr = 0.5; % the lower the smaller (more centralized) the contour
-cellColor = [1 1 1];
-widthContour = 1;
-[d1,d2] = size(neuron.Cn);
-
-figure;
-imagesc(zeros(d1, d2)); % background
-colormap(gray);
-caxis([0 0.1]);
-hold on;
-
-CC = cell(size(neuron.A, 2),1);
-CR = cell(size(neuron.A, 2),2);
-for i = 1:size(neuron.A ,2)
-    A_temp = full(reshape(neuron.A(:,i),d1,d2));
-    A_temp = medfilt2(A_temp,[3,3]);
-    A_temp = A_temp(:);
-    [temp,ind] = sort(A_temp(:).^2,'ascend');
-    temp =  cumsum(temp);
-    ff = find(temp > (1-thr)*temp(end),1,'first');
-    if ~isempty(ff)
-        CC{i} = contourf(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor',cellColor, 'linewidth', widthContour);
-        fp = find(A_temp >= A_temp(ind(ff)));
-        [ii,jj] = ind2sub([d1,d2],fp);
-        CR{i,1} = [ii,jj]';
-        CR{i,2} = A_temp(fp)';
-    end
-    hold on;
-end
-axis off
-title(sprintf('%s: %s', nameSubj, dateSession))
-% %save
-% print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
-
+% %% Read source data
+% addpath(fullfile(dirProjects, '/_toolbox/CNMF_E/'));
+% cnmfe_setup;
+% d_sources2D = dir(fullfile(dirProcdata_session, 'Sources2D_all*'));
+% 
+% load(fullfile(d_sources2D(1).folder, d_sources2D(1).name));
+% 
+% validIndCell = [];
+% validIndCell(:,1) = 1:length(neuron.ids);
+% if strcmpi(nameSubj, 'max')
+%     load(fullfile(dirProcdata_session, 'validIndCell.mat'), 'indCell')
+%     validIndCell = indCell.validCell;
 % end
-%
-% Coor = neuron.get_contours(thr); 
-% CC = Coor;
-% for i = 1:size(Aor,2)
-%     %         cont = medfilt1(Coor{i}')';
-%     cont = Coor{i};
-%     if size(cont,2) > 1
-%         plot(cont(1,1:end),cont(2,1:end),'Color',cmap(i+size(Aor,2),:), 'linewidth', ln_wd); hold on;
+% 
+% 
+% % get the contours and image field of view
+% % neuron_b = neuron.batches{1}.neuron;
+% 
+% % Generate cell location map within FOV
+% thr = 0.5; % the lower the smaller (more centralized) the contour
+% cellColor = [1 1 1];
+% widthContour = 1;
+% [d1,d2] = size(neuron.Cn);
+% 
+% figure;
+% imagesc(zeros(d1, d2)); % background
+% colormap(gray);
+% caxis([0 0.1]);
+% hold on;
+% 
+% CC = cell(size(neuron.A, 2),1);
+% CR = cell(size(neuron.A, 2),2);
+% for i = 1:size(neuron.A ,2)
+%     A_temp = full(reshape(neuron.A(:,i),d1,d2));
+%     A_temp = medfilt2(A_temp,[3,3]);
+%     A_temp = A_temp(:);
+%     [temp,ind] = sort(A_temp(:).^2,'ascend');
+%     temp =  cumsum(temp);
+%     ff = find(temp > (1-thr)*temp(end),1,'first');
+%     if ~isempty(ff)
+%         CC{i} = contourf(reshape(A_temp,d1,d2), [0,0]+A_temp(ind(ff)), 'LineColor',cellColor, 'linewidth', widthContour);
+%         fp = find(A_temp >= A_temp(ind(ff)));
+%         [ii,jj] = ind2sub([d1,d2],fp);
+%         CR{i,1} = [ii,jj]';
+%         CR{i,2} = A_temp(fp)';
 %     end
+%     hold on;
 % end
+% axis off
+% title(sprintf('%s: %s', nameSubj, dateSession))
+% % %save
+% % print(gcf, fullfile(dirFig, sprintf('SourceFOV_solidWhite_bkgdBlack_thr%s_%s_%s', strrep(num2str(thr),'.', 'p'), nameSubj, dateSession)), '-depsc');
+% 
+% % end
+% %
+% % Coor = neuron.get_contours(thr); 
+% % CC = Coor;
+% % for i = 1:size(Aor,2)
+% %     %         cont = medfilt1(Coor{i}')';
+% %     cont = Coor{i};
+% %     if size(cont,2) > 1
+% %         plot(cont(1,1:end),cont(2,1:end),'Color',cmap(i+size(Aor,2),:), 'linewidth', ln_wd); hold on;
+% %     end
+% % end
 
 
 
