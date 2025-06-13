@@ -321,14 +321,17 @@ set(gcf, 'Color', 'w')
 % hold on;
 % for iType = 1:k
 for iC = 1:size(cellPix, 2)
-Coor = cellPix(iC).contourCell{1};
-p = plot(Coor(1,:), Coor(2,:), '.', 'Color', ones(1,3).*0.75); hold on;
-if ismember(iC, setCell_ID)
-%     locC = find(setCell_ID==iC);
-    p.Color = [0 0 0];
+    Coor = cellPix(iC).contourCell{1};
+    p = plot(Coor(1,:), Coor(2,:), '.', 'Color', ones(1,3).*0.75); hold on;
+    if ismember(iC, setCell_ID)
+        %     locC = find(setCell_ID==iC);
+        p.Color = [0 0 0];
+    end
 end
-% text(Coor(1,end), Coor(2,end), num2str(indCellValid(indCell_sort{iType}(iC, 1))), ...
-%         'color', 'k')
+for iCC = 1:length(setCell_ID)
+Coor = cellPix(setCell_ID(iCC)).contourCell{1};
+text(Coor(1,end)+5, Coor(2,end)+5, num2str(setCell_ID(iCC)), ...
+        'color', 'k'); hold on
 end
 % end
 set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20], 'YLim', [0-20 d1+20]) %, 'Color', 'k', 'Box', 'off')
@@ -337,8 +340,8 @@ axis off
 line([0 0], [250 250-(100/3.125)], 'color', 'k', 'LineWidth', 5) % scale bar for 100 um (1px = 3.125um)
 set(gca, 'XTick', [], 'YTick', [], 'Box', 'off')
 setCellID_str = sprintf('%d_', setCell_ID);
-print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_allCellgray0p75_setCellID%s_black',nameSubj, FOV_ID, setCellID_str)), '-depsc')
-print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_allCellgray0p75_setCellID%s_black',nameSubj, FOV_ID, setCellID_str)), '-r300', '-dtiff')
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_allCellgray0p75_setCellID%s_black_IDlabeled',nameSubj, FOV_ID, setCellID_str)), '-depsc')
+print(gcf, fullfile(dirFig, sprintf('%s_FOV%d_allCellgray0p75_setCellID%s_black_IDlabeled',nameSubj, FOV_ID, setCellID_str)), '-r300', '-dtiff')
 
 
 

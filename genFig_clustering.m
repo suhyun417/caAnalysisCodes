@@ -45,7 +45,7 @@ addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
 
-iSubj = 1; %2; %1; %2; %1; %2; %1; %2; %1;
+iSubj = 2; %1; %2; %1; %2; %1; %2; %1;
 
 nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
 FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
@@ -214,7 +214,7 @@ matTS_norm2(:, iType) = mean(matAvgTS2(:, indCell_sort{iType}), 2)';
 end
 
 %
-tempOrder = [1 2 3 4 5]; %[1 3 5 4 2]; %[1 2 3 4 5]; %[1 3 5 4 2]; % re-organize the population plot for Max
+tempOrder = [1 3 5 4 2]; %[1 2 3 4 5]; %[1 3 5 4 2]; % re-organize the population plot for Max
 tempInd = []; tempID = [];
 for iK = 1:k
 tempInd = cat(1, tempInd, indCelldfl(sortedIDXdfl==tempOrder(iK)));
@@ -263,10 +263,10 @@ print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_matTS_neg1pos10', 
 figure;
 set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 150])
 % subplot('Position', [0.01 0.05 1 1])
-plot(zscore(matTS_norm1(:,tempOrder)), 'LineWidth', 2)
+plot(fliplr(zscore(matTS_norm1(:,tempOrder))), 'LineWidth', 2) %flip it to make the first one to be drawn last (to look better)
 % cMap_sort = hsv(k);
 % cMap_sort(2,:) = [206 182 49]./255;
-colororder(cMap_sort)
+colororder(flipud(cMap_sort)) % because the order of drawing flipped
 axis tight
 set(gca, 'XTick', 200:200:1200, 'XTickLabel', [], 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
 print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_avgTS_zscore', nameSubj, k)), '-depsc')
@@ -293,14 +293,14 @@ print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_matTS_neg1pos10', 
 figure;
 set(gcf, 'Color', 'w', 'PaperPositionMode', 'auto', 'Position', [1200 1200 760 150])
 % subplot('Position', [0 0 1 1])
-plot(zscore(matTS_norm2(:,tempOrder)), 'LineWidth', 2)
+plot(fliplr(zscore(matTS_norm2(:,tempOrder))), 'LineWidth', 2) %flip it to make the first one to be drawn last (to look better)
 % cMap_sort = hsv(k);
 % cMap_sort(2,:) = [206 182 49]./255;
-colororder(cMap_sort)
+colororder(flipud(cMap_sort)) % because the order of drawing flipped
 axis tight
 set(gca, 'XTick', 200:200:1200, 'XTickLabel', [], 'LineWidth', 2, 'TickDir', 'out', 'box', 'off')
-print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_avgTS_zscore', nameSubj, k)), '-depsc')
-print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_avgTS_zscore', nameSubj, k)), '-r300', '-dtiff')
+print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_avgTS_zscore_group1front', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_avgTS_zscore_group1front', nameSubj, k)), '-r300', '-dtiff')
 
 
 

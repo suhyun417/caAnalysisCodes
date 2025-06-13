@@ -1,6 +1,9 @@
 % genFig_dataMining_PCA.m
 %
-% 2023/03/29 SHP
+% 2025/06/12 SHP
+%  - modify the directory setting
+%  - visualize PCs and PC score spatial distribution across animals
+% 2023/03/29 created by SHP
 % playground to compare the map of across neuron variance using PCA,
 % compare the maps from different conditions
 % The idea is to evaluate more continuous changes across neurons over
@@ -9,33 +12,19 @@
 clear all;
 
 
-%% settings
-flagBiowulf = 0; %1; %0;
 
-if flagBiowulf
-    directory.dataHome = '/data/parks20/procdata/NeuroMRI/';
-    dirFig = '/data/parks20/analysis/_figs';
-else
-    ss = pwd;
-    if ~isempty(strfind(ss, 'Volume')) % if it's local
-        dirProjects = '/Volumes/NIFVAULT/projects/parksh';
-        dirProcdata = '/Volumes/NIFVAULT/procdata/parksh';
-        dirRawdata = '/Volumes/NIFVAULT/rawdata/parksh';
-    else % on virtual machine
-        dirProjects = '/nifvault/projects/parksh';
-        dirProcdata = '/nifvault/procdata/parksh';
-        dirRawdata = '/nifvault/rawdata/parksh';
-    end
-end
+%% Directory settings
+directory = setDir_shp;
+dirProjects = directory.dirProjects;
+dirProcdata = directory.dirProcdata;
+dirRawdata = directory.dirRawdata;
+dirFig = directory.dirFig;
+
 
 addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
 addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
 addpath(fullfile(dirProjects, '_toolbox/Fast_Tiff_Write/'));
 addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
-% gcp; % for parallel processingls
-
-dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
-
 
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
@@ -93,7 +82,7 @@ indCellValid = find(cat(1, cellTS_DFL.nTrial1_total)>8); %
 load(fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/DFL_TS_PCA.mat'))
 
 iMovie = 1;
-score = resultsPCA_DFL(iSubj).resultsPCA_run(iMovie).score;
+score = resultsPCA(iSubj).resultsPCA_run(iMovie).score;
 
 iPC = 3;
 for iPC = 1:3
