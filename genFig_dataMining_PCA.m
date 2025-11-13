@@ -82,16 +82,114 @@ indCellValid = find(cat(1, cellTS_DFL.nTrial1_total)>8); %
 load(fullfile(dirProcdata, '_marmoset/invivoCalciumImaging/DFL_TS_PCA.mat'))
 
 iMovie = 1;
-score = resultsPCA(iSubj).resultsPCA_run(iMovie).score;
+% score = resultsPCA(iSubj).resultsPCA_run(iMovie).score;
 
+for iSubj = 1:2
+    score{iSubj} = resultsPCA(iSubj).resultsPCA_run(iMovie).score(:,1:3);
+    coeff{iSubj} = resultsPCA(iSubj).resultsPCA_run(iMovie).coeff(:,1:3);
+end
+
+% Visualize the PC time course for both areas
+figure
+set(gcf, 'color', 'w', 'Position', [100 100 630 890])
+SP(1) = subplot('Position', [0.1 0.7 0.85 0.25]);
+SP(2) = subplot('Position', [0.1 0.4 0.85 0.25]);
+SP(3) = subplot('Position', [0.1 0.1 0.85 0.25]);
+plot(SP(1), [coeff{2}(:,1), coeff{1}(:,1)], 'LineWidth', 2)
+plot(SP(2), [coeff{2}(:,2), coeff{1}(:,2)], 'LineWidth', 2)
+plot(SP(3), [coeff{2}(:,3), coeff{1}(:,3)], 'LineWidth', 2)
+cMap_areas = [102 230 179; 255 170 187]./255;
+set(SP(:), 'ColorOrder', flipud(cMap_areas))
+set(SP(:), 'xlim', [0 1200], 'LineWidth', 2)
+set(SP(1:2), 'XTickLabel', [])
+set(SP(3), 'XTickLabel', 0:20:120)
+set(SP(:), 'TIckDir', 'out', 'Box', 'off')
+print(fullfile(dirFig, 'DFL1_PC123_timecourse_TablaMax'), '-r300', '-dtiff')
+print(fullfile(dirFig, 'DFL1_PC123_timecourse_TablaMax'), '-depsc')
+
+
+% PC score spatial distribution over FOV
+% make bwr colormap
+n = 256;
+r = [linspace(0,1,n/2), ones(1, n/2)];
+g = [linspace(0,1,n/2), linspace(1,0, n/2)];
+b = [ones(1,n/2), linspace(1,0,n/2)];
+bwr = [r' g' b'];
+
+% get coordinates for each point
+curcenter_um=[];
+for iC = 1:size(indCellValid, 1)
+    curCenter = mean(cellPix(indCellValid(iC)).centerCell, 1);
+    curcenter_um(iC, :) = curCenter.*3.125;
+end
+
+% Marker 'o' version
+iSubj = 1;
+iPC = 2;
+figure;
+set(gcf, 'Color', 'w')
+[d1 d2] = size(infoCells(1).imgFOV);
+scatter(curcenter_um(:,2), curcenter_um(:,1), 120, score{iSubj}(:,iPC), 'filled', 'o',...
+    'MarkerEdgeColor', 'w', 'LineWidth', 2);
+colormap(bwr)
+% colorbar
+axis equal
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20].*3.125, 'YLim', [0-20 d1+20].*3.125) %, 'Color', 'k', 'Box', 'off')
+set(gca, 'YTick', 0:200:800)
+set(gca, 'TickDir', 'out', 'Box', 'on')
+if iSubj == 2
+    set(gca, 'YTickLabelRotation', 270, 'XAxisLocation', 'top', 'XTickLabelRotation', 270, ...
+        'XTickLabel', 600:-200:0)
+end
+grid on
+set(gca, 'CLim', [-1 1].*23); %floor(mean(abs(round(get(gca, 'CLim'))))))
+print(fullfile(dirFig, sprintf('DFL1_%s_PC%d_score_FOVum_o', nameSubj, iPC)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL1_%s_PC%d_score_FOVum_o', nameSubj, iPC)), '-r300', '-dtiff')
+
+% for iC = 1:size(indCellValid, 1)
+%     curCenter = mean(cellPix(indCellValid(iC)).centerCell, 1);
+%     curcenter_um = curCenter*3.125;
+%     plot(curcenter_um(2), curcenter_um(1), 'Marker', 'o') %, ...
+% %         'MarkerFaceColor', cMap_sort(iType, :), 'MarkerEdgeColor', 'w',...
+% %         'MarkerSize', 10, 'LineWidth', 2); 
+%         hold on;
+% end
+
+% Marker 'X'
+figure;
+set(gcf, 'Color', 'w')
+[d1 d2] = size(infoCells(1).imgFOV);
+for iType = 1:k
+    for iC = 1:size(indCell_sort{iType}, 1)
+        curCenter = mean(cellPix(indCellValid(indCell_sort{iType}(iC, 1))).centerCell, 1);
+        curcenter_um = curCenter*3.125;
+        plot(curcenter_um(2), curcenter_um(1), 'Marker', 'x', ...
+            'Color', cMap_sort(iType, :), ...
+            'MarkerSize', 10, 'LineWidth', 2); hold on;
+    end
+end
+axis equal
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20].*3.125, 'YLim', [0-20 d1+20].*3.125) %, 'Color', 'k', 'Box', 'off')
+set(gca, 'YTick', 0:200:800)
+set(gca, 'TickDir', 'out', 'Box', 'on')
+if iSubj == 2
+    set(gca, 'YTickLabelRotation', 270, 'XAxisLocation', 'top', 'XTickLabelRotation', 270, ...
+        'XTickLabel', 600:-200:0)
+end
+grid on;
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_x', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_x', nameSubj, k)), '-r300', '-dtiff')
+
+
+
+%% older version of visualization
 iPC = 3;
 for iPC = 1:3
 % [sortedScore_abs, indCell_abs] = sort(abs(score(:,iPC)), 'descend');
 [sortedScore, indCell] = sort(score(:,iPC), 'descend');
-
-
 % indCell = indCell_abs;
 
+% PC score distribution
 figure;
 % cMap_sort = jet(length(indCell)); %jet(length(indCell)); %hsv(k);
 cMap_sort = cool(length(indCell));

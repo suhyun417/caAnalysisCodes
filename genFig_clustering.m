@@ -339,6 +339,57 @@ print(fullfile(dirFig, sprintf('DFL2_Clustering_%s_%dClusters_avgTS_zscore_separ
 
 
 %%% FOV
+% Marker 'o'
+figure;
+set(gcf, 'Color', 'w')
+[d1 d2] = size(infoCells(1).imgFOV);
+for iType = 1:k
+    for iC = 1:size(indCell_sort{iType}, 1)
+        curCenter = mean(cellPix(indCellValid(indCell_sort{iType}(iC, 1))).centerCell, 1);
+        curcenter_um = curCenter*3.125;
+        plot(curcenter_um(2), curcenter_um(1), 'Marker', 'o', ...
+            'MarkerFaceColor', cMap_sort(iType, :), 'MarkerEdgeColor', 'w',...
+            'MarkerSize', 10, 'LineWidth', 2); hold on;
+    end
+end
+axis equal
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20].*3.125, 'YLim', [0-20 d1+20].*3.125) %, 'Color', 'k', 'Box', 'off')
+set(gca, 'YTick', 0:200:800)
+set(gca, 'TickDir', 'out', 'Box', 'on')
+if iSubj == 2
+    set(gca, 'YTickLabelRotation', 270, 'XAxisLocation', 'top', 'XTickLabelRotation', 270, ...
+        'XTickLabel', 600:-200:0)
+end
+grid on
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_o', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_o', nameSubj, k)), '-r300', '-dtiff')
+
+% Marker 'X'
+figure;
+set(gcf, 'Color', 'w')
+[d1 d2] = size(infoCells(1).imgFOV);
+for iType = 1:k
+    for iC = 1:size(indCell_sort{iType}, 1)
+        curCenter = mean(cellPix(indCellValid(indCell_sort{iType}(iC, 1))).centerCell, 1);
+        curcenter_um = curCenter*3.125;
+        plot(curcenter_um(2), curcenter_um(1), 'Marker', 'x', ...
+            'Color', cMap_sort(iType, :), ...
+            'MarkerSize', 10, 'LineWidth', 2); hold on;
+    end
+end
+axis equal
+set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20].*3.125, 'YLim', [0-20 d1+20].*3.125) %, 'Color', 'k', 'Box', 'off')
+set(gca, 'YTick', 0:200:800)
+set(gca, 'TickDir', 'out', 'Box', 'on')
+if iSubj == 2
+    set(gca, 'YTickLabelRotation', 270, 'XAxisLocation', 'top', 'XTickLabelRotation', 270, ...
+        'XTickLabel', 600:-200:0)
+end
+grid on;
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_x', nameSubj, k)), '-depsc')
+print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_x', nameSubj, k)), '-r300', '-dtiff')
+
+
 figure;
 set(gcf, 'Color', 'w')
 % cMap_sort = hsv(k);
@@ -367,57 +418,6 @@ hold on
 % line([300 300-(100/3.125)], [290 290], 'color', 'k', 'LineWidth', 5) % scale bar for 100 um (1px = 3.125um)
 % print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOV', nameSubj, k)), '-depsc')
 % print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOV', nameSubj, k)), '-r300', '-dtiff')
-
-% style #2
-figure;
-set(gcf, 'Color', 'w')
-[d1 d2] = size(infoCells(1).imgFOV);
-for iType = 1:k
-    for iC = 1:size(indCell_sort{iType}, 1)
-        curCenter = mean(cellPix(indCellValid(indCell_sort{iType}(iC, 1))).centerCell, 1);
-        curcenter_um = curCenter*3.125;
-        plot(curcenter_um(2), curcenter_um(1), 'Marker', 'x', ...
-            'Color', cMap_sort(iType, :), ...
-            'MarkerSize', 10, 'LineWidth', 2); hold on;
-    end
-end
-axis equal
-set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20].*3.125, 'YLim', [0-20 d1+20].*3.125) %, 'Color', 'k', 'Box', 'off')
-set(gca, 'YTick', 0:200:800)
-set(gca, 'TickDir', 'out', 'Box', 'on')
-if iSubj == 2
-    set(gca, 'YTickLabelRotation', 270, 'XAxisLocation', 'top', 'XTickLabelRotation', 270, ...
-        'XTickLabel', 600:-200:0)
-end
-grid on;
-print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_x', nameSubj, k)), '-depsc')
-print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_x', nameSubj, k)), '-r300', '-dtiff')
-
-% style #2
-figure;
-set(gcf, 'Color', 'w')
-[d1 d2] = size(infoCells(1).imgFOV);
-for iType = 1:k
-    for iC = 1:size(indCell_sort{iType}, 1)
-        curCenter = mean(cellPix(indCellValid(indCell_sort{iType}(iC, 1))).centerCell, 1);
-        curcenter_um = curCenter*3.125;
-        plot(curcenter_um(2), curcenter_um(1), 'Marker', 'o', ...
-            'MarkerFaceColor', cMap_sort(iType, :), 'MarkerEdgeColor', 'w',...
-            'MarkerSize', 10, 'LineWidth', 2); hold on;
-    end
-end
-axis equal
-set(gca, 'YDir', 'reverse', 'XLim', [0-20 d2+20].*3.125, 'YLim', [0-20 d1+20].*3.125) %, 'Color', 'k', 'Box', 'off')
-set(gca, 'YTick', 0:200:800)
-set(gca, 'TickDir', 'out', 'Box', 'on')
-if iSubj == 2
-    set(gca, 'YTickLabelRotation', 270, 'XAxisLocation', 'top', 'XTickLabelRotation', 270, ...
-        'XTickLabel', 600:-200:0)
-end
-grid on
-print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_o', nameSubj, k)), '-depsc')
-print(fullfile(dirFig, sprintf('DFL1_Clustering_%s_%dClusters_FOVum_o', nameSubj, k)), '-r300', '-dtiff')
-
 
 
 

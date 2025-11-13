@@ -209,14 +209,14 @@ set(gca, 'YLim', [2 36])
 set(fig_grand, 'Color', 'w', 'Position', [100   100   1594   924])
 setCell_str = sprintf('%d_', setCell);
 setCell_str = setCell_str(1:end-1);
-print(fig_grand, fullfile(dirFig, sprintf('%s_FOV%d_session%d_exCells_%s_MOV_IMG_RS', ...
-    nameSubj, FOV_ID, iSession, setCell_str)), '-r0', '-depsc');
+% print(fig_grand, fullfile(dirFig, sprintf('%s_FOV%d_session%d_exCells_%s_MOV_IMG_RS', ...
+%     nameSubj, FOV_ID, iSession, setCell_str)), '-r0', '-depsc');
 
 
 
 %%% 2. draw IMG, MOV, RS responses separately: 3 or 4 neurons for each  BPM>DFL, BPM<DFL, BPM=DFL 
 % set of the example cells 
-setCell = [40 9 73 21 4 35 79 36 23]; %[40 9 73 82 21 4 35 41 79 36 23 29]; %[40 9 73 82 21 4 35 41 79 36 23 29];
+setCell = [9 73 82 29 36 79 41 4 35 21]; % changed order to show the larger movie response at the top[40 9 73 21 4 35 79 36 23]; %[40 9 73 82 21 4 35 41 79 36 23 29]; %[40 9 73 82 21 4 35 41 79 36 23 29];
 
 % prepare the cell traces
 matTS_BPM = [];
