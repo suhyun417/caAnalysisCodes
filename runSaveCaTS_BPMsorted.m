@@ -4,33 +4,37 @@
 % save calcium time series from Basic Preference Mapping runs for each
 % session, sorted based on stimulus condition
 
-clear all; close all;
+clear all;
 
-ss = pwd;
-if ~isempty(strfind(ss, 'Volume')) % if it's local
-    dirProjects = '/Volumes/PROJECTS/parksh';
-    dirProcdata = '/Volumes/PROCDATA/parksh';
-    dirRawdata = '/Volumes/rawdata/parksh';
-else % on virtual machine
-    dirProjects = '/projects/parksh';
-    dirProcdata = '/procdata/parksh';
-    dirRawdata = '/rawdata/parksh';
-end
+%% Directory settings
+directory = setDir_shp;
+dirProjects = directory.dirProjects;
+dirProcdata = directory.dirProcdata;
+dirRawdata = directory.dirRawdata;
+dirFig = directory.dirFig;
 
+
+addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
+addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
+addpath(fullfile(dirProjects, '_toolbox/Fast_Tiff_Write/'));
+addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
+
+%
 flagSave = 0; %1; % 1 if you want to save sorted time series into a .mat file
 flagPlot = 0; % 1 if you want draw response selectivity plot for each cell. "genFig_stimSortedTS_BPM.m" does the same plotting
 flagSavePPTX = 0; % 1 if you want to save all the figures to a powerpoint file
 
 
 %% directory
-setNameSubj = {'Tabla', 'Max'};
+setSubj = {'Tabla', 1; 'Max', 3};
 
-for iSubj = 1:length(setNameSubj)
+for iSubj = 1:size(setSubj, 1)
     
-    nameSubj = setNameSubj{iSubj}; %'Tabla'; %'Max';
-    
+    nameSubj = setSubj{iSubj,1}; %'Max'; % 'Tabla'; %'Max'; %'Tabla'; %'Max'; %'Tabla';
+    FOV_ID = setSubj{iSubj,2}; %3; %1; %3; %1;
+
     % get session info
-    [infoSession, opts] = readInfoSession(nameSubj);
+    [infoSession, opts] = readInfoSession(nameSubj, FOV_ID);
     
     [c, ia, indRun] = unique(infoSession.(1), 'sorted');
     setDateSession = c(2:end); % 1st one is always empty

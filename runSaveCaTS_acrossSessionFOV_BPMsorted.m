@@ -1,5 +1,7 @@
 % runSaveCaTS_acrossSessionFOV_BPMsorted.m
 %
+% 2025/11/19
+% added the baseline-normalization matrix across sessions to be accumulated
 % 2023/02/24
 % save the BPM time series for the cells aligned across sessions for a given FOV
 
@@ -7,34 +9,23 @@
 clear all;
 
 
-%% settings
-flagBiowulf = 0; %1; %0;
+%% Directory settings
+directory = setDir_shp;
+dirProjects = directory.dirProjects;
+dirProcdata = directory.dirProcdata;
+dirRawdata = directory.dirRawdata;
+dirFig = directory.dirFig;
 
-if flagBiowulf
-    directory.dataHome = '/data/parks20/procdata/NeuroMRI/';
-    dirFig = '/data/parks20/analysis/_figs';
-else
-    ss = pwd;
-    if ~isempty(strfind(ss, 'Volume')) % if it's local
-        dirProjects = '/Volumes/NIFVAULT/PROJECTS/parksh';
-        dirProcdata = '/Volumes/NIFVAULT/PROCDATA/parksh';
-        dirRawdata = '/Volumes/rawdata/parksh';
-    else % on virtual machine
-        dirProjects = '/nifvault/projects/parksh';
-        dirProcdata = '/nifvault/procdata/parksh';
-        dirRawdata = '/nifvault/rawdata/parksh';
-    end
-end
 
 addpath(fullfile(dirProjects, '_toolbox/TIFFstack'));
 addpath(fullfile(dirProjects, '_toolbox/NoRMCorre/'));
 addpath(fullfile(dirProjects, '_toolbox/Fast_Tiff_Write/'));
 addpath(fullfile(dirProjects, '_toolbox/imagetools/'));
-% gcp; % for parallel processingls
 
 dirFig = fullfile(dirProjects, '0Marmoset/Ca/_labNote/_figs/');
 
-flagSaveFile = 1; %0; %1;
+
+flagSaveFile = 0; %1; %0; %1;
 
 %% Session info & optional parameters
 setSubj = {'Tabla', 1; 'Max', 3};
@@ -97,6 +88,10 @@ end
 % matAvgAmp_b_norm: [11×1 double]
 % avgAmp_b: -0.0864
 % avgAmp_b_norm: -0.3803
+% baselineNorm_param: '20251118_baseline from the entire run is used to normalize and termed "baselineNorm"'
+% matTS_baselineNorm: [46×11 double]
+% matResp_baselineNorm: [11×11 double]
+% matRespAvg_baselineNorm: [11×1 double]
 
 cellTS = struct([]);
 cellPix = struct([]);
@@ -106,7 +101,7 @@ for iCell = 1:size(cellIDAcrossDay, 1)
     curCells_id = cellIDAcrossDay(iCell, curCells_session);
     
     for iStim = 1:25 
-        tempMatTS = []; tempMatTS_norm = []; indTrial_org = {}; nTrial = [];
+        tempMatTS = []; tempMatTS_norm = []; tempMatTS_basenorm = []; indTrial_org = {}; nTrial = [];
         for iSetCell = 1:length(curCells_id)
             
             if iSubj == 1 && ismember(curCells_session(iSetCell), [11 12]) % last two sessions of Tabla's are not merged b/c of stimulus set
@@ -120,6 +115,8 @@ for iCell = 1:size(cellIDAcrossDay, 1)
             
             tempMatTS = cat(1, tempMatTS, resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS');
             tempMatTS_norm = cat(1, tempMatTS_norm, resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS_norm');
+
+            tempMatTS_basenorm = cat(1, tempMatTS_basenorm, resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).matTS_baselineNorm');
             
             indTrial_org{iSetCell} = resultsBPM(curCells_session(iSetCell)).tS_session_stim(curCells_id(iSetCell),iStim).indTrial_org;
             nTrial(iSetCell, 1) = size(indTrial_org{iSetCell}, 1);
@@ -135,6 +132,9 @@ for iCell = 1:size(cellIDAcrossDay, 1)
         cellTS(iCell, iStim).matTS_norm = tempMatTS_norm;
         cellTS(iCell, iStim).matTS_norm_avg = mean(tempMatTS_norm);
         cellTS(iCell, iStim).matTS_norm_ste = std(tempMatTS_norm)./sqrt(size(tempMatTS_norm, 1)-1);
+        cellTS(iCell, iStim).matTS_baselinenorm = tempMatTS_basenorm;
+        cellTS(iCell, iStim).matTS_baselinenorm_avg = mean(tempMatTS_basenorm);
+        cellTS(iCell, iStim).matTS_baselinenorm_ste = std(tempMatTS_basenorm)./sqrt(size(tempMatTS_basenorm, 1)-1);
         
     end
 end
@@ -145,6 +145,13 @@ if flagSaveFile
     save(fname_caTSFOV, 'cellTS') %, 'cellPix')
 %     fprintf(1, '\n Saving files for %s FOV %d: in total %d/%d cells aligned \n', nameSubj, FOV_ID, countValidCell, length(flagDone))
 end
+
+%temporary save (due to 
+fname_caTSFOV = sprintf('/home/parks23/Research/0Marmoset/Ca/tempData/%s_FOV%d_BPMsorted_baselineNormAdded.mat', nameSubj, FOV_ID);
+save(fname_caTSFOV, 'cellTS') %, 'cellPix')
+
+
+
 
 % for iC = 1:length(indCellValid)
 %     iCell = indCellValid(iC);
